@@ -2,12 +2,137 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
-
+    <title>Resonance</title>
   </head>
-  <body>
-    <h1 class="text-3xl font-bold underline">💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
+  <body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
+    <div id="app" class="h-full flex flex-col p-4 gap-4">
+      <!-- Main Content Area -->
+      <div class="flex-1 flex gap-4 overflow-hidden">
+        <!-- Left Panel - Title, Author & Lyrics -->
+        <div class="w-1/2 bg-neutral-800 rounded-2xl p-6 flex flex-col overflow-hidden">
+          <!-- Title and Author Section -->
+          <div class="mb-4 pb-4 border-b border-neutral-700">
+            <h1 class="text-2xl font-bold mb-1" id="song-title">No Song Playing</h1>
+            <p class="text-neutral-400" id="song-artist">Unknown Artist</p>
+          </div>
+
+          <!-- Lyrics Section -->
+          <div class="flex-1 overflow-y-auto">
+            <div class="text-neutral-300 leading-relaxed whitespace-pre-line" id="lyrics">
+              Select a song to view lyrics
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel - Tabs -->
+        <div class="w-1/2 bg-neutral-800 rounded-2xl flex flex-col overflow-hidden">
+          <!-- Tab Headers -->
+          <div class="flex border-b border-neutral-700">
+            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn active" data-tab="queue">
+              Queue
+            </button>
+            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="library">
+              Library
+            </button>
+            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="search">
+              Search
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="flex-1 overflow-hidden">
+            <!-- Queue Tab -->
+            <div class="tab-content h-full overflow-y-auto p-6" id="queue-tab">
+              <h2 class="text-xl font-bold mb-4">Up Next</h2>
+              <div id="queue-list" class="space-y-2">
+                <p class="text-neutral-400">Queue is empty</p>
+              </div>
+            </div>
+
+            <!-- Library Tab -->
+            <div class="tab-content h-full overflow-y-auto p-6 hidden" id="library-tab">
+              <h2 class="text-xl font-bold mb-4">Your Library</h2>
+              <div id="library-list" class="space-y-2">
+                <p class="text-neutral-400">No songs in library</p>
+              </div>
+            </div>
+
+            <!-- Search Tab -->
+            <div class="tab-content h-full overflow-y-auto p-6 hidden" id="search-tab">
+              <input 
+                type="text" 
+                placeholder="Search for songs..." 
+                class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition"
+                id="search-input"
+              >
+              <div id="search-results" class="space-y-2">
+                <p class="text-neutral-400">Search for songs</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MP3 Controls Section - Full Width at Bottom -->
+      <div class="bg-neutral-800 rounded-2xl overflow-hidden">
+        <!-- Control Buttons -->
+        <div class="flex items-center justify-between p-6 pb-4">
+          <div class="w-1/3"></div>
+          
+          <div class="flex items-center justify-center gap-6 w-1/3">
+            <!-- Previous Button -->
+            <button class="text-neutral-400 hover:text-white transition" id="prev-btn">
+              <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z"/>
+              </svg>
+            </button>
+
+            <!-- Play/Pause Button -->
+            <button class="bg-blue-500 hover:bg-blue-600 rounded-full p-3 transition" id="play-pause-btn">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" id="play-icon">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24" id="pause-icon">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+              </svg>
+            </button>
+
+            <!-- Next Button -->
+            <button class="text-neutral-400 hover:text-white transition" id="next-btn">
+              <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Volume Control with Hover -->
+          <div class="w-1/3 flex justify-end">
+            <div class="relative volume-container">
+              <button class="text-neutral-400 hover:text-white transition" id="volume-btn">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                </svg>
+              </button>
+              <div class="absolute bottom-full right-0 mb-2 bg-neutral-700 rounded-lg p-3 hidden volume-slider-container">
+                <input type="range" min="0" max="100" value="70" class="h-24 w-1.5 bg-neutral-600 rounded-full appearance-none cursor-pointer volume-vertical" id="volume-slider" orient="vertical">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Bar - Full Width at Bottom -->
+        <div class="px-6 pb-4">
+          <div class="flex justify-between text-xs text-neutral-400 mb-2">
+            <span id="current-time">0:00</span>
+            <span id="total-time">0:00</span>
+          </div>
+          <div class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer" id="progress-bar">
+            <div class="bg-blue-500 h-1.5 rounded-full transition-all" id="progress" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="/src/renderer.js"></script>
   </body>
 </html>
