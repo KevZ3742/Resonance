@@ -1,15 +1,38 @@
 {
   "name": "resonance",
-  "productName": "Resonance",
-  "version": "0.1.0",
-  "main": "main.js",
-  "description": "Resonance — a personal music app",
-  "author": "Your Name",
-  "license": "MIT",
+  "productName": "resonance",
+  "version": "1.0.0",
+  "description": "My Electron application description",
+  "main": ".vite/build/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
   },
+  "keywords": [],
+  "author": {
+    "name": "KevZ3742",
+    "email": "kzhang3742@gmail.com"
+  },
+  "license": "MIT",
   "devDependencies": {
-    "electron": "^30.0.0"
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron-forge/plugin-vite": "^7.10.2",
+    "@electron/fuses": "^1.8.0",
+    "electron": "39.2.7",
+    "vite": "^5.4.21"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "electron-squirrel-startup": "^1.0.1",
+    "tailwindcss": "^4.1.18"
   }
 }
