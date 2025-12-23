@@ -1,11 +1,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import os from 'os';
-import ffmpeg from '@ffmpeg-installer/ffmpeg';
-import YTDlpWrap from 'yt-dlp-wrap';
+import youtubeDl from 'youtube-dl-exec';
+import ffmpegStatic from 'ffmpeg-static';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -78,104 +77,67 @@ const ensureDownloadsDir = () => {
 ipcMain.handle('download-song', async (event, url) => {
   const downloadsPath = ensureDownloadsDir();
   
-  return new Promise(async (resolve, reject) => {
-    // Get ffmpeg path from the bundled binary
-    const ffmpegPath = path.dirname(ffmpeg.path);
-    
-    // Initialize yt-dlp-wrap with bundled binary
-    const ytDlpWrap = new YTDlpWrap();
-    
-    // Get the yt-dlp binary path
-    let ytDlpPath;
-    try {
-      ytDlpPath = await ytDlpWrap.getYtDlpBinaryPath();
-    } catch (error) {
-      // If binary doesn't exist, download it
-      ytDlpPath = await YTDlpWrap.downloadFromGithub();
-    }
-    
-    // yt-dlp command arguments
-    const args = [
-      '-x',  // Extract audio
-      '--audio-format', 'mp3',  // Convert to mp3
-      '--audio-quality', '0',  // Best quality
-      '--embed-thumbnail',  // Embed thumbnail
-      '--add-metadata',  // Add metadata
-      '--ffmpeg-location', ffmpegPath,  // Use bundled ffmpeg
-      '--output', path.join(downloadsPath, '%(title)s.%(ext)s'),  // Output template
-      url
-    ];
-
-    // Spawn yt-dlp process
-    const ytdlp = spawn(ytDlpPath, args);
-
-    let errorOutput = '';
-    let outputData = '';
-
-    ytdlp.stdout.on('data', (data) => {
-      const output = data.toString();
-      outputData += output;
-      
-      // Parse download progress
-      const progressMatch = output.match(/(\d+\.?\d*)%/);
-      if (progressMatch) {
-        event.sender.send('download-progress', {
-          progress: parseFloat(progressMatch[1]),
-          status: 'downloading'
-        });
-      }
-
-      // Check for extraction/conversion phase
-      if (output.includes('Extracting audio')) {
-        event.sender.send('download-progress', {
-          progress: 90,
-          status: 'converting'
-        });
-      }
+  try {
+    // Send initial progress
+    event.sender.send('download-progress', {
+      progress: 10,
+      status: 'downloading'
     });
 
-    ytdlp.stderr.on('data', (data) => {
-      const error = data.toString();
-      errorOutput += error;
-      console.error('yt-dlp error:', error);
+    // Output template for the file
+    const outputTemplate = path.join(downloadsPath, '%(title)s.%(ext)s');
+
+    event.sender.send('download-progress', {
+      progress: 30,
+      status: 'downloading'
     });
 
-    ytdlp.on('close', (code) => {
-      if (code === 0) {
-        // Extract filename from output
-        const filenameMatch = outputData.match(/\[ExtractAudio\] Destination: (.+)/);
-        let filename = 'Unknown';
-        
-        if (filenameMatch) {
-          filename = path.basename(filenameMatch[1]);
-        }
-
-        event.sender.send('download-complete', {
-          success: true,
-          filename: filename,
-          path: downloadsPath
-        });
-        
-        resolve({
-          success: true,
-          filename: filename,
-          path: downloadsPath
-        });
-      } else {
-        const errorMessage = errorOutput || 'Download failed';
-        event.sender.send('download-error', {
-          error: errorMessage
-        });
-        reject(new Error(errorMessage));
-      }
+    // Download and convert to MP3
+    // youtube-dl-exec automatically finds the binary installed via npm
+    await youtubeDl(url, {
+      extractAudio: true,
+      audioFormat: 'mp3',
+      audioQuality: 0,
+      output: outputTemplate,
+      ffmpegLocation: ffmpegStatic,
+      noPlaylist: true,
     });
 
-    ytdlp.on('error', (error) => {
-      const errorMessage = `Failed to start yt-dlp: ${error.message}. Make sure yt-dlp is installed.`;
-      event.sender.send('download-error', {
-        error: errorMessage
-      });
-      reject(new Error(errorMessage));
+    event.sender.send('download-progress', {
+      progress: 95,
+      status: 'converting'
     });
-  });
+
+    // Get the most recently created file
+    const files = fs.readdirSync(downloadsPath);
+    const latestFile = files
+      .filter(name => name.endsWith('.mp3'))
+      .map(name => ({
+        name,
+        time: fs.statSync(path.join(downloadsPath, name)).mtime.getTime()
+      }))
+      .sort((a, b) => b.time - a.time)[0];
+
+    const filename = latestFile?.name || 'download.mp3';
+
+    event.sender.send('download-complete', {
+      success: true,
+      filename: filename,
+      path: downloadsPath
+    });
+
+    return {
+      success: true,
+      filename: filename,
+      path: downloadsPath
+    };
+
+  } catch (error) {
+    console.error('Download error:', error);
+    const errorMessage = error.message || error.toString() || 'Unknown error occurred';
+    event.sender.send('download-error', {
+      error: errorMessage
+    });
+    throw new Error(errorMessage);
+  }
 });

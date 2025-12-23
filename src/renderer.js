@@ -141,7 +141,16 @@ window.electronAPI.onDownloadComplete((data) => {
 
 // Listen for download errors
 window.electronAPI.onDownloadError((data) => {
-  showDownloadMessage(`✗ Error: ${data.error}`, 'error');
+  let errorMsg = data.error;
+  
+  // Provide friendly error messages for common issues
+  if (errorMsg.includes('DRM')) {
+    errorMsg = 'This service uses DRM protection and cannot be downloaded. Try YouTube or SoundCloud instead.';
+  } else if (errorMsg.includes('Unsupported URL')) {
+    errorMsg = 'This URL is not supported. Please use YouTube, SoundCloud, or other supported platforms.';
+  }
+  
+  showDownloadMessage(`✗ ${errorMsg}`, 'error');
   downloadBtn.disabled = false;
   downloadBtn.textContent = 'Download';
   downloadProgressContainer.classList.add('hidden');
