@@ -3,8 +3,17 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
 import os from 'os';
-import youtubeDl from 'youtube-dl-exec';
+import YTDlpWrapModule from 'yt-dlp-wrap';
 import ffmpegStatic from 'ffmpeg-static';
+import { fileURLToPath } from 'url';
+
+// Handle default export from CommonJS module
+const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
+
+// Get the directory path for storing yt-dlp binary
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ytDlpPath = path.join(__dirname, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
+const youtubeDl = new YTDlpWrap(ytDlpPath);
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -35,7 +44,18 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Download yt-dlp binary if not present
+  try {
+    if (!fs.existsSync(ytDlpPath)) {
+      console.log('Downloading yt-dlp binary...');
+      await YTDlpWrap.downloadFromGithub(ytDlpPath);
+      console.log('yt-dlp binary downloaded successfully');
+    }
+  } catch (error) {
+    console.error('Failed to download yt-dlp binary:', error.message);
+  }
+  
   createWindow();
 
   // On OS X it's common to re-create a window in the app when the
@@ -93,15 +113,15 @@ ipcMain.handle('download-song', async (event, url) => {
     });
 
     // Download and convert to MP3
-    // youtube-dl-exec automatically finds the binary installed via npm
-    await youtubeDl(url, {
-      extractAudio: true,
-      audioFormat: 'mp3',
-      audioQuality: 0,
-      output: outputTemplate,
-      ffmpegLocation: ffmpegStatic,
-      noPlaylist: true,
-    });
+    await youtubeDl.execPromise([
+      url,
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
+      '-o', outputTemplate,
+      '--ffmpeg-location', ffmpegStatic,
+      '--no-playlist'
+    ]);
 
     event.sender.send('download-progress', {
       progress: 95,

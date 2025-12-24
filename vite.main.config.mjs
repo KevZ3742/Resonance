@@ -6,7 +6,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'ffmpeg-static',
-        'youtube-dl-exec'
+        'yt-dlp-wrap'
       ]
     }
   }
