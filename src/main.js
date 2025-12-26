@@ -450,6 +450,76 @@ ipcMain.handle('list-all-songs', async () => {
   }
 });
 
+// Handle removing song from playlist
+ipcMain.handle('remove-from-playlist', async (event, playlistName, songFilename) => {
+  try {
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    const songPath = path.join(playlistPath, songFilename);
+    
+    if (!fs.existsSync(playlistPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    // Delete the file or reference
+    if (fs.existsSync(songPath)) {
+      fs.unlinkSync(songPath);
+    }
+    
+    // Also check for .ref files
+    const refPath = songPath + '.ref';
+    if (fs.existsSync(refPath)) {
+      fs.unlinkSync(refPath);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to remove song from playlist:', error);
+    throw error;
+  }
+});
+
+// Handle reordering songs in playlist
+ipcMain.handle('reorder-playlist-songs', async (event, playlistName, orderedSongs) => {
+  try {
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    const metadataPath = path.join(playlistPath, '.playlist-order.json');
+    
+    if (!fs.existsSync(playlistPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    // Save the order to a metadata file
+    const metadata = {
+      order: orderedSongs,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to reorder playlist songs:', error);
+    throw error;
+  }
+});
+
+// Handle getting playlist order
+ipcMain.handle('get-playlist-order', async (event, playlistName) => {
+  try {
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    const metadataPath = path.join(playlistPath, '.playlist-order.json');
+    
+    if (fs.existsSync(metadataPath)) {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      return metadata.order || [];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Failed to get playlist order:', error);
+    return [];
+  }
+});
+
 // Handle getting theme preference
 ipcMain.handle('get-theme', async () => {
   const userDataPath = app.getPath('userData');

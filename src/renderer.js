@@ -615,8 +615,8 @@ async function openPlaylistEditor(playlistName) {
   document.getElementById('playlist-edit-title').textContent = playlistName;
   
   // Load available songs and playlist songs
-  await loadAvailableSongs();
   await loadPlaylistSongs(playlistName);
+  await loadAvailableSongs(playlistName);
 }
 
 // Back to playlists button
@@ -631,41 +631,104 @@ if (backToPlaylistsBtn) {
 }
 
 // Load available songs for adding to playlist
-async function loadAvailableSongs() {
+let availableSongsCache = [];
+
+async function loadAvailableSongs(playlistName) {
   try {
-    const songs = await window.electronAPI.listAllSongs();
+    const allSongs = await window.electronAPI.listAllSongs();
+    const playlistSongs = await window.electronAPI.listPlaylistSongs(playlistName);
     const availableSongsList = document.getElementById('available-songs-list');
+    const searchInput = document.getElementById('available-songs-search');
     
-    if (songs.length === 0) {
-      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs available</p>';
-      return;
+    // Filter out songs that are already in the playlist
+    // Remove .ref extension from playlist songs for comparison
+    const playlistSongNames = playlistSongs.map(song => song.replace('.ref', ''));
+    const availableSongs = allSongs.filter(song => !playlistSongNames.includes(song));
+    
+    // Cache the available songs for search filtering
+    availableSongsCache = availableSongs;
+    
+    // Setup search functionality
+    setupAvailableSongsSearch();
+    
+    // Preserve the search query and filter accordingly
+    const currentQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (currentQuery) {
+      const filteredSongs = availableSongs.filter(song => 
+        song.toLowerCase().includes(currentQuery)
+      );
+      renderAvailableSongs(filteredSongs);
+    } else {
+      renderAvailableSongs(availableSongs);
     }
-    
-    availableSongsList.innerHTML = songs.map(song => `
-      <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
-        <span class="text-sm truncate flex-1">${song}</span>
-        <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1" data-song="${song}">
-          + Add
-        </button>
-      </div>
-    `).join('');
-    
-    // Add click handlers
-    document.querySelectorAll('.add-song-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const songName = btn.getAttribute('data-song');
-        await addSongToPlaylist(currentEditingPlaylist, songName);
-      });
-    });
   } catch (error) {
     console.error('Failed to load available songs:', error);
   }
 }
 
+function renderAvailableSongs(songs) {
+  const availableSongsList = document.getElementById('available-songs-list');
+  
+  if (songs.length === 0) {
+    const searchInput = document.getElementById('available-songs-search');
+    const hasSearchQuery = searchInput && searchInput.value.trim();
+    
+    if (hasSearchQuery) {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs match your search</p>';
+    } else if (availableSongsCache.length === 0) {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs available (all songs are in this playlist)</p>';
+    } else {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs available</p>';
+    }
+    return;
+  }
+  
+  availableSongsList.innerHTML = songs.map(song => `
+    <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
+      <span class="text-sm truncate flex-1">${song}</span>
+      <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1" data-song="${song}">
+        + Add
+      </button>
+    </div>
+  `).join('');
+  
+  // Add click handlers
+  document.querySelectorAll('.add-song-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const songName = btn.getAttribute('data-song');
+      await addSongToPlaylist(currentEditingPlaylist, songName);
+    });
+  });
+}
+
+function setupAvailableSongsSearch() {
+  const searchInput = document.getElementById('available-songs-search');
+  if (!searchInput) return;
+  
+  // Remove previous listener if exists
+  const newSearchInput = searchInput.cloneNode(true);
+  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+  
+  newSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (!query) {
+      renderAvailableSongs(availableSongsCache);
+      return;
+    }
+    
+    const filteredSongs = availableSongsCache.filter(song => 
+      song.toLowerCase().includes(query)
+    );
+    
+    renderAvailableSongs(filteredSongs);
+  });
+}
+
 // Load songs in current playlist
 async function loadPlaylistSongs(playlistName) {
   try {
-    const songs = await window.electronAPI.listPlaylistSongs(playlistName);
+    let songs = await window.electronAPI.listPlaylistSongs(playlistName);
     const playlistSongsList = document.getElementById('playlist-songs-list');
     
     if (songs.length === 0) {
@@ -673,8 +736,32 @@ async function loadPlaylistSongs(playlistName) {
       return;
     }
     
-    playlistSongsList.innerHTML = songs.map(song => `
-      <div class="bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition flex justify-between items-center">
+    // Get saved order and apply it
+    const savedOrder = await window.electronAPI.getPlaylistOrder(playlistName);
+    if (savedOrder && savedOrder.length > 0) {
+      // Sort songs according to saved order
+      const orderedSongs = [];
+      for (const orderedSong of savedOrder) {
+        if (songs.includes(orderedSong)) {
+          orderedSongs.push(orderedSong);
+        }
+      }
+      // Add any songs not in the saved order at the end
+      for (const song of songs) {
+        if (!orderedSongs.includes(song)) {
+          orderedSongs.push(song);
+        }
+      }
+      songs = orderedSongs;
+    }
+    
+    playlistSongsList.innerHTML = songs.map((song, index) => `
+      <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition flex items-center gap-3" data-song="${song}" data-index="${index}" draggable="true">
+        <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+          </svg>
+        </div>
         <div class="flex-1">
           <div class="font-medium">${song.replace('.ref', '')}</div>
         </div>
@@ -691,11 +778,15 @@ async function loadPlaylistSongs(playlistName) {
     
     // Add remove handlers
     document.querySelectorAll('.remove-song-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const songName = btn.getAttribute('data-song');
         await removeSongFromPlaylist(playlistName, songName);
       });
     });
+    
+    // Add drag and drop handlers
+    setupDragAndDrop(playlistName);
   } catch (error) {
     console.error('Failed to load playlist songs:', error);
   }
@@ -706,6 +797,7 @@ async function addSongToPlaylist(playlistName, songFilename) {
   try {
     await window.electronAPI.addToPlaylist(playlistName, songFilename);
     await loadPlaylistSongs(playlistName);
+    await loadAvailableSongs(playlistName);
   } catch (error) {
     console.error('Failed to add song to playlist:', error);
     alert('Failed to add song: ' + error.message);
@@ -715,13 +807,12 @@ async function addSongToPlaylist(playlistName, songFilename) {
 // Remove song from playlist
 async function removeSongFromPlaylist(playlistName, songFilename) {
   try {
-    const playlistsPath = await window.electronAPI.getDownloadsPath();
-    // This would need an IPC handler in main.js to actually delete the file/link
-    // For now, we'll just refresh the view
-    alert('Remove functionality will be implemented soon');
+    await window.electronAPI.removeFromPlaylist(playlistName, songFilename);
     await loadPlaylistSongs(playlistName);
+    await loadAvailableSongs(playlistName);
   } catch (error) {
     console.error('Failed to remove song from playlist:', error);
+    alert('Failed to remove song: ' + error.message);
   }
 }
 
@@ -827,6 +918,93 @@ if (themeLightBtn) {
 if (preferencesCloseBtn) {
   preferencesCloseBtn.addEventListener('click', () => {
     hidePreferencesModal();
+  });
+}
+
+// Drag and drop functionality for playlist reordering
+let draggedElement = null;
+let draggedIndex = null;
+
+function setupDragAndDrop(playlistName) {
+  const playlistItems = document.querySelectorAll('.playlist-song-item');
+  
+  playlistItems.forEach(item => {
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', (e) => handleDrop(e, playlistName));
+    item.addEventListener('dragenter', handleDragEnter);
+    item.addEventListener('dragleave', handleDragLeave);
+    item.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+function handleDragStart(e) {
+  draggedElement = e.currentTarget;
+  draggedIndex = parseInt(draggedElement.getAttribute('data-index'));
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(e) {
+  if (e.currentTarget.classList.contains('playlist-song-item')) {
+    e.currentTarget.classList.add('border-2', 'border-blue-500');
+  }
+}
+
+function handleDragLeave(e) {
+  if (e.currentTarget.classList.contains('playlist-song-item')) {
+    e.currentTarget.classList.remove('border-2', 'border-blue-500');
+  }
+}
+
+async function handleDrop(e, playlistName) {
+  if (e.stopPropagation) {
+    e.stopPropagation();
+  }
+  
+  const targetElement = e.currentTarget;
+  const targetIndex = parseInt(targetElement.getAttribute('data-index'));
+  
+  if (draggedElement !== targetElement) {
+    // Get all songs in current order
+    const allItems = Array.from(document.querySelectorAll('.playlist-song-item'));
+    const songs = allItems.map(item => item.getAttribute('data-song'));
+    
+    // Reorder the array
+    const draggedSong = songs[draggedIndex];
+    songs.splice(draggedIndex, 1);
+    songs.splice(targetIndex, 0, draggedSong);
+    
+    // Save the new order
+    try {
+      await window.electronAPI.reorderPlaylistSongs(playlistName, songs);
+      // Reload to show new order
+      await loadPlaylistSongs(playlistName);
+    } catch (error) {
+      console.error('Failed to reorder songs:', error);
+      alert('Failed to reorder songs: ' + error.message);
+    }
+  }
+  
+  targetElement.classList.remove('border-2', 'border-blue-500');
+  return false;
+}
+
+function handleDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  
+  // Remove all drag indicators
+  document.querySelectorAll('.playlist-song-item').forEach(item => {
+    item.classList.remove('border-2', 'border-blue-500');
   });
 }
 

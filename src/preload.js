@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listPlaylists: () => ipcRenderer.invoke('list-playlists'),
   listPlaylistSongs: (playlistName) => ipcRenderer.invoke('list-playlist-songs', playlistName),
   listAllSongs: () => ipcRenderer.invoke('list-all-songs'),
+  removeFromPlaylist: (playlistName, songFilename) => ipcRenderer.invoke('remove-from-playlist', playlistName, songFilename),
+  reorderPlaylistSongs: (playlistName, orderedSongs) => ipcRenderer.invoke('reorder-playlist-songs', playlistName, orderedSongs),
+  getPlaylistOrder: (playlistName) => ipcRenderer.invoke('get-playlist-order', playlistName),
   getTheme: () => ipcRenderer.invoke('get-theme'),
   setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
   onOpenPreferences: (callback) => {
