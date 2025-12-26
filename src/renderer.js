@@ -67,9 +67,121 @@ progressBar.addEventListener('click', (e) => {
 
 // Search functionality
 const searchInput = document.getElementById('search-input');
-searchInput.addEventListener('input', (e) => {
-  console.log('Search:', e.target.value);
+const searchResults = document.getElementById('search-results');
+const searchSourceButtons = document.querySelectorAll('.search-source-btn');
+
+let currentSearchSource = 'youtube';
+let searchTimeout = null;
+
+// Handle search source switching
+searchSourceButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const source = button.getAttribute('data-source');
+    
+    // Remove active class from all buttons
+    searchSourceButtons.forEach(btn => {
+      btn.classList.remove('active', 'bg-blue-500', 'hover:bg-blue-600');
+      btn.classList.add('bg-neutral-700', 'hover:bg-neutral-600');
+    });
+    
+    // Add active class to clicked button
+    button.classList.remove('bg-neutral-700', 'hover:bg-neutral-600');
+    button.classList.add('active', 'bg-blue-500', 'hover:bg-blue-600');
+    
+    // Update current source
+    currentSearchSource = source;
+    
+    // Re-run search with new source if there's a query
+    const query = searchInput.value.trim();
+    if (query) {
+      performSearch(query, source);
+    }
+  });
 });
+
+// Handle search input with debounce
+searchInput.addEventListener('input', (e) => {
+  const query = e.target.value.trim();
+  
+  // Clear previous timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  
+  // If empty, show default message
+  if (!query) {
+    searchResults.innerHTML = '<p class="text-neutral-400">Search for songs</p>';
+    return;
+  }
+  
+  // Show searching indicator
+  searchResults.innerHTML = '<p class="text-neutral-400">Searching...</p>';
+  
+  // Debounce search by 500ms
+  searchTimeout = setTimeout(() => {
+    performSearch(query, currentSearchSource);
+  }, 500);
+});
+
+async function performSearch(query, source) {
+  console.log(`Searching ${source} for: ${query}`);
+  
+  try {
+    // Call the search API based on source
+    const results = await window.electronAPI.searchSongs(query, source);
+    displaySearchResults(results, source);
+  } catch (error) {
+    console.error('Search error:', error);
+    searchResults.innerHTML = '<p class="text-red-400">Error searching. Please try again.</p>';
+  }
+}
+
+function displaySearchResults(results, source) {
+  if (!results || results.length === 0) {
+    searchResults.innerHTML = '<p class="text-neutral-400">No results found</p>';
+    return;
+  }
+  
+  searchResults.innerHTML = results.map(result => `
+    <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result)}'>
+      <div class="flex items-center gap-3">
+        ${result.thumbnail ? `
+          <img src="${result.thumbnail}" alt="${result.title}" class="w-16 h-16 object-cover rounded">
+        ` : `
+          <div class="w-16 h-16 bg-neutral-800 rounded flex items-center justify-center">
+            <svg class="w-8 h-8 text-neutral-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+          </div>
+        `}
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-white truncate group-hover:text-blue-400 transition">${result.title}</p>
+          <p class="text-sm text-neutral-400 truncate">${result.artist || result.uploader || 'Unknown Artist'}</p>
+          ${result.duration ? `<p class="text-xs text-neutral-500">${formatDuration(result.duration)}</p>` : ''}
+        </div>
+        <div class="flex gap-2">
+          <button class="p-2 hover:bg-neutral-500 rounded-lg transition" onclick="addToQueue(event, ${JSON.stringify(result).replace(/"/g, '&quot;')})">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function formatDuration(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+window.addToQueue = (event, result) => {
+  event.stopPropagation();
+  console.log('Add to queue:', result);
+  // TODO: Implement queue functionality
+};
 
 // Download functionality
 const downloadUrlInput = document.getElementById('download-url-input');

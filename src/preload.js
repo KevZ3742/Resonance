@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   downloadSong: (url) => ipcRenderer.invoke('download-song', url),
+  searchSongs: (query, source) => ipcRenderer.invoke('search-songs', query, source),
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (event, data) => callback(data));
   },
