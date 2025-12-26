@@ -10,6 +10,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   searchSongs: (query, source) => ipcRenderer.invoke('search-songs', query, source),
   openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
   getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
+  getAllSongsPath: () => ipcRenderer.invoke('get-all-songs-path'),
+  createPlaylist: (playlistName) => ipcRenderer.invoke('create-playlist', playlistName),
+  addToPlaylist: (playlistName, songFilename) => ipcRenderer.invoke('add-to-playlist', playlistName, songFilename),
+  listPlaylists: () => ipcRenderer.invoke('list-playlists'),
+  listPlaylistSongs: (playlistName) => ipcRenderer.invoke('list-playlist-songs', playlistName),
+  listAllSongs: () => ipcRenderer.invoke('list-all-songs'),
+  getTheme: () => ipcRenderer.invoke('get-theme'),
+  setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
+  onOpenPreferences: (callback) => {
+    ipcRenderer.on('open-preferences', () => callback());
+  },
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (event, data) => callback(data));
   },

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, shell, Menu } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
@@ -45,12 +45,48 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+  
+  return mainWindow;
+};
+
+// Create custom menu
+const createMenu = () => {
+  const template = [
+    {
+      label: 'My Profile',
+      submenu: [
+        {
+          label: 'Preferences',
+          accelerator: 'CmdOrCtrl+,',
+          click: (menuItem, browserWindow) => {
+            if (browserWindow) {
+              browserWindow.webContents.send('open-preferences');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }
+  ];
+  
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // Create custom menu
+  createMenu();
+  
   // Ensure downloads directory exists
   ensureDownloadsDir();
   
@@ -88,17 +124,42 @@ app.on('window-all-closed', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
-// Get downloads directory
+// Get downloads directory (base Resonance directory)
 const getDownloadsPath = () => {
   return path.join(os.homedir(), 'Downloads', 'Resonance');
 };
 
-// Ensure downloads directory exists
+// Get all songs directory
+const getAllSongsPath = () => {
+  return path.join(getDownloadsPath(), 'all songs');
+};
+
+// Get playlists directory
+const getPlaylistsPath = () => {
+  return path.join(getDownloadsPath(), 'playlists');
+};
+
+// Ensure downloads directory exists with proper structure
 const ensureDownloadsDir = () => {
   const downloadsPath = getDownloadsPath();
+  const allSongsPath = getAllSongsPath();
+  const playlistsPath = getPlaylistsPath();
+  
+  // Create base directory
   if (!fs.existsSync(downloadsPath)) {
     fs.mkdirSync(downloadsPath, { recursive: true });
   }
+  
+  // Create 'all songs' directory
+  if (!fs.existsSync(allSongsPath)) {
+    fs.mkdirSync(allSongsPath, { recursive: true });
+  }
+  
+  // Create 'playlists' directory
+  if (!fs.existsSync(playlistsPath)) {
+    fs.mkdirSync(playlistsPath, { recursive: true });
+  }
+  
   return downloadsPath;
 };
 
@@ -198,7 +259,8 @@ ipcMain.handle('search-songs', async (event, query, source) => {
 
 // Handle song download
 ipcMain.handle('download-song', async (event, url) => {
-  const downloadsPath = ensureDownloadsDir();
+  ensureDownloadsDir();
+  const allSongsPath = getAllSongsPath();
   
   try {
     // Send initial progress
@@ -207,8 +269,8 @@ ipcMain.handle('download-song', async (event, url) => {
       status: 'downloading'
     });
 
-    // Output template for the file
-    const outputTemplate = path.join(downloadsPath, '%(title)s.%(ext)s');
+    // Output template for the file (save to 'all songs' directory)
+    const outputTemplate = path.join(allSongsPath, '%(title)s.%(ext)s');
 
     event.sender.send('download-progress', {
       progress: 30,
@@ -231,13 +293,13 @@ ipcMain.handle('download-song', async (event, url) => {
       status: 'converting'
     });
 
-    // Get the most recently created file
-    const files = fs.readdirSync(downloadsPath);
+    // Get the most recently created file from 'all songs' directory
+    const files = fs.readdirSync(allSongsPath);
     const latestFile = files
       .filter(name => name.endsWith('.mp3'))
       .map(name => ({
         name,
-        time: fs.statSync(path.join(downloadsPath, name)).mtime.getTime()
+        time: fs.statSync(path.join(allSongsPath, name)).mtime.getTime()
       }))
       .sort((a, b) => b.time - a.time)[0];
 
@@ -246,13 +308,13 @@ ipcMain.handle('download-song', async (event, url) => {
     event.sender.send('download-complete', {
       success: true,
       filename: filename,
-      path: downloadsPath
+      path: allSongsPath
     });
 
     return {
       success: true,
       filename: filename,
-      path: downloadsPath
+      path: allSongsPath
     };
 
   } catch (error) {
@@ -279,4 +341,146 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
 // Handle getting downloads path
 ipcMain.handle('get-downloads-path', async () => {
   return getDownloadsPath();
+});
+
+// Handle getting all songs path
+ipcMain.handle('get-all-songs-path', async () => {
+  return getAllSongsPath();
+});
+
+// Handle creating a new playlist
+ipcMain.handle('create-playlist', async (event, playlistName) => {
+  try {
+    ensureDownloadsDir();
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    
+    if (fs.existsSync(playlistPath)) {
+      throw new Error('Playlist already exists');
+    }
+    
+    fs.mkdirSync(playlistPath, { recursive: true });
+    return { success: true, path: playlistPath };
+  } catch (error) {
+    console.error('Failed to create playlist:', error);
+    throw error;
+  }
+});
+
+// Handle adding song to playlist (creates symlink/shortcut)
+ipcMain.handle('add-to-playlist', async (event, playlistName, songFilename) => {
+  try {
+    const songPath = path.join(getAllSongsPath(), songFilename);
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    
+    if (!fs.existsSync(songPath)) {
+      throw new Error('Song file does not exist');
+    }
+    
+    if (!fs.existsSync(playlistPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    const linkPath = path.join(playlistPath, songFilename);
+    
+    // Create symlink (or copy on Windows if symlink fails)
+    try {
+      if (process.platform === 'win32') {
+        // On Windows, create a shortcut file
+        fs.linkSync(songPath, linkPath);
+      } else {
+        // On Unix-like systems, create a symbolic link
+        fs.symlinkSync(songPath, linkPath);
+      }
+    } catch (linkError) {
+      // Fallback: create a text file with the path reference
+      const referenceContent = `# Playlist Reference\nOriginal: ${songPath}`;
+      fs.writeFileSync(linkPath + '.ref', referenceContent);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to add song to playlist:', error);
+    throw error;
+  }
+});
+
+// Handle listing all playlists
+ipcMain.handle('list-playlists', async () => {
+  try {
+    ensureDownloadsDir();
+    const playlistsPath = getPlaylistsPath();
+    const playlists = fs.readdirSync(playlistsPath, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+    return playlists;
+  } catch (error) {
+    console.error('Failed to list playlists:', error);
+    return [];
+  }
+});
+
+// Handle listing songs in a playlist
+ipcMain.handle('list-playlist-songs', async (event, playlistName) => {
+  try {
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    if (!fs.existsSync(playlistPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    const songs = fs.readdirSync(playlistPath)
+      .filter(file => file.endsWith('.mp3') || file.endsWith('.ref'));
+    return songs;
+  } catch (error) {
+    console.error('Failed to list playlist songs:', error);
+    throw error;
+  }
+});
+
+// Handle listing all songs
+ipcMain.handle('list-all-songs', async () => {
+  try {
+    ensureDownloadsDir();
+    const allSongsPath = getAllSongsPath();
+    const songs = fs.readdirSync(allSongsPath)
+      .filter(file => file.endsWith('.mp3'));
+    return songs;
+  } catch (error) {
+    console.error('Failed to list all songs:', error);
+    return [];
+  }
+});
+
+// Handle getting theme preference
+ipcMain.handle('get-theme', async () => {
+  const userDataPath = app.getPath('userData');
+  const settingsPath = path.join(userDataPath, 'settings.json');
+  
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      return settings.theme || 'dark';
+    }
+  } catch (error) {
+    console.error('Failed to read theme:', error);
+  }
+  return 'dark';
+});
+
+// Handle setting theme preference
+ipcMain.handle('set-theme', async (event, theme) => {
+  const userDataPath = app.getPath('userData');
+  const settingsPath = path.join(userDataPath, 'settings.json');
+  
+  try {
+    let settings = {};
+    if (fs.existsSync(settingsPath)) {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+    settings.theme = theme;
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save theme:', error);
+    throw error;
+  }
 });
