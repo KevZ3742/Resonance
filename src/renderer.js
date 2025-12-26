@@ -72,6 +72,7 @@ const searchSourceButtons = document.querySelectorAll('.search-source-btn');
 
 let currentSearchSource = 'youtube';
 let searchTimeout = null;
+let currentSearchId = 0; // Track the current search to ignore outdated results
 
 // Handle search source switching
 searchSourceButtons.forEach(button => {
@@ -91,10 +92,21 @@ searchSourceButtons.forEach(button => {
     // Update current source
     currentSearchSource = source;
     
+    // Clear any pending search timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      searchTimeout = null;
+    }
+    
+    // Increment search ID to invalidate any pending searches
+    currentSearchId++;
+    
     // Re-run search with new source if there's a query
     const query = searchInput.value.trim();
     if (query) {
-      performSearch(query, source);
+      // Show searching immediately when switching providers
+      searchResults.innerHTML = '<p class="text-neutral-400">Searching...</p>';
+      performSearch(query, source, currentSearchId);
     }
   });
 });
@@ -117,22 +129,35 @@ searchInput.addEventListener('input', (e) => {
   // Show searching indicator
   searchResults.innerHTML = '<p class="text-neutral-400">Searching...</p>';
   
+  // Increment search ID for this new search
+  currentSearchId++;
+  const thisSearchId = currentSearchId;
+  
   // Debounce search by 500ms
   searchTimeout = setTimeout(() => {
-    performSearch(query, currentSearchSource);
+    performSearch(query, currentSearchSource, thisSearchId);
   }, 500);
 });
 
-async function performSearch(query, source) {
-  console.log(`Searching ${source} for: ${query}`);
+async function performSearch(query, source, searchId) {
+  console.log(`Searching ${source} for: ${query} (ID: ${searchId})`);
   
   try {
     // Call the search API based on source
     const results = await window.electronAPI.searchSongs(query, source);
-    displaySearchResults(results, source);
+    
+    // Only display results if this search is still the current one
+    if (searchId === currentSearchId) {
+      displaySearchResults(results, source);
+    } else {
+      console.log(`Ignoring outdated search results (ID: ${searchId}, current: ${currentSearchId})`);
+    }
   } catch (error) {
     console.error('Search error:', error);
-    searchResults.innerHTML = '<p class="text-red-400">Error searching. Please try again.</p>';
+    // Only show error if this search is still current
+    if (searchId === currentSearchId) {
+      searchResults.innerHTML = '<p class="text-red-400">Error searching. Please try again.</p>';
+    }
   }
 }
 
@@ -329,4 +354,4 @@ function openFolder(folderPath) {
   console.log('Open folder:', folderPath);
 }
 
-console.log('🎵 Resonance Music Player loaded');
+console.log('Resonance Music Player loaded');
