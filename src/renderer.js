@@ -167,7 +167,7 @@ function displaySearchResults(results, source) {
     return;
   }
   
-  searchResults.innerHTML = results.map(result => `
+  searchResults.innerHTML = results.map((result, index) => `
     <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result)}'>
       <div class="flex items-center gap-3">
         ${result.thumbnail ? `
@@ -185,15 +185,33 @@ function displaySearchResults(results, source) {
           ${result.duration ? `<p class="text-xs text-neutral-500">${formatDuration(result.duration)}</p>` : ''}
         </div>
         <div class="flex gap-2">
-          <button class="p-2 hover:bg-neutral-500 rounded-lg transition" onclick="addToQueue(event, ${JSON.stringify(result).replace(/"/g, '&quot;')})">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <button class="download-btn p-2 hover:bg-neutral-500 rounded-lg transition" id="download-btn-${index}" data-url="${result.url}">
+            <svg class="plus-icon w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            <svg class="loading-icon w-5 h-5 hidden animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg class="checkmark-icon w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
             </svg>
           </button>
         </div>
       </div>
     </div>
   `).join('');
+  
+  // Add event listeners to all download buttons
+  results.forEach((result, index) => {
+    const btn = document.getElementById(`download-btn-${index}`);
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadFromSearch(result.url, btn);
+      });
+    }
+  });
 }
 
 function formatDuration(seconds) {
@@ -202,11 +220,39 @@ function formatDuration(seconds) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-window.addToQueue = (event, result) => {
-  event.stopPropagation();
-  console.log('Add to queue:', result);
-  // TODO: Implement queue functionality
-};
+async function downloadFromSearch(url, buttonElement) {
+  const plusIcon = buttonElement.querySelector('.plus-icon');
+  const loadingIcon = buttonElement.querySelector('.loading-icon');
+  const checkmarkIcon = buttonElement.querySelector('.checkmark-icon');
+  
+  // Disable button and show loading
+  buttonElement.disabled = true;
+  plusIcon.classList.add('hidden');
+  loadingIcon.classList.remove('hidden');
+  
+  try {
+    await window.electronAPI.downloadSong(url);
+    
+    // Show checkmark on success
+    loadingIcon.classList.add('hidden');
+    checkmarkIcon.classList.remove('hidden');
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      checkmarkIcon.classList.add('hidden');
+      plusIcon.classList.remove('hidden');
+      buttonElement.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Download failed:', error);
+    
+    // Reset button on error
+    loadingIcon.classList.add('hidden');
+    plusIcon.classList.remove('hidden');
+    buttonElement.disabled = false;
+  }
+}
 
 // Download functionality
 const downloadUrlInput = document.getElementById('download-url-input');
@@ -322,14 +368,9 @@ function addToDownloadHistory(filename, filepath) {
   // Update UI
   if (downloads.length > 0) {
     downloadList.innerHTML = downloads.map((download, index) => `
-      <div class="bg-neutral-700 rounded-lg p-3 flex justify-between items-center">
-        <div class="flex-1">
-          <p class="text-white font-medium truncate">${download.filename}</p>
-          <p class="text-xs text-neutral-400">${formatTimestamp(download.timestamp)}</p>
-        </div>
-        <button class="text-blue-400 hover:text-blue-300 text-sm" onclick="openFolder('${download.filepath.replace(/\\/g, '\\\\')}')">
-          Open Folder
-        </button>
+      <div class="bg-neutral-700 rounded-lg p-3">
+        <p class="text-white font-medium truncate">${download.filename}</p>
+        <p class="text-xs text-neutral-400">${formatTimestamp(download.timestamp)}</p>
       </div>
     `).join('');
   }
@@ -349,9 +390,25 @@ function formatTimestamp(date) {
   return date.toLocaleDateString();
 }
 
-function openFolder(folderPath) {
-  // This would need to be implemented via IPC if we want to open the folder
-  console.log('Open folder:', folderPath);
+async function openFolder(folderPath) {
+  try {
+    await window.electronAPI.openFolder(folderPath);
+  } catch (error) {
+    console.error('Failed to open folder:', error);
+  }
+}
+
+// Open Song Directory button
+const openSongDirectoryBtn = document.getElementById('open-song-directory-btn');
+if (openSongDirectoryBtn) {
+  openSongDirectoryBtn.addEventListener('click', async () => {
+    try {
+      const downloadsPath = await window.electronAPI.getDownloadsPath();
+      await openFolder(downloadsPath);
+    } catch (error) {
+      console.error('Failed to open song directory:', error);
+    }
+  });
 }
 
 console.log('Resonance Music Player loaded');

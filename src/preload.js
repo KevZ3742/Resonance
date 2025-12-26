@@ -8,6 +8,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   downloadSong: (url) => ipcRenderer.invoke('download-song', url),
   searchSongs: (query, source) => ipcRenderer.invoke('search-songs', query, source),
+  openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
+  getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (event, data) => callback(data));
   },

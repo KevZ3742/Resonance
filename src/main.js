@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
@@ -51,6 +51,9 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // Ensure downloads directory exists
+  ensureDownloadsDir();
+  
   // Download yt-dlp binary if not present
   try {
     if (!fs.existsSync(ytDlpPath)) {
@@ -260,4 +263,20 @@ ipcMain.handle('download-song', async (event, url) => {
     });
     throw new Error(errorMessage);
   }
+});
+
+// Handle opening folder
+ipcMain.handle('open-folder', async (event, folderPath) => {
+  try {
+    await shell.openPath(folderPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to open folder:', error);
+    throw new Error('Failed to open folder');
+  }
+});
+
+// Handle getting downloads path
+ipcMain.handle('get-downloads-path', async () => {
+  return getDownloadsPath();
 });
