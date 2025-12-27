@@ -137,15 +137,9 @@ export const DEFAULT_THEME_LIST = [
 
   { name: 'boysenberry', displayName: 'Boysenberry', category: 'Hundred Rabbits' },
   { name: 'gotham', displayName: 'Gotham', category: 'Hundred Rabbits' },
-  { name: 'laundry', displayName: 'Laundry', category: 'Hundred Rabbits' },
-  { name: 'murata', displayName: 'Murata', category: 'Hundred Rabbits' },
-  { name: 'nightowl', displayName: 'Night Owl', category: 'Hundred Rabbits' },
   { name: 'noir', displayName: 'Noir', category: 'Hundred Rabbits' },
   { name: 'nord', displayName: 'Nord', category: 'Hundred Rabbits' },
   { name: 'op-1', displayName: 'OP-1', category: 'Hundred Rabbits' },
-  { name: 'pico8', displayName: 'PICO-8', category: 'Hundred Rabbits' },
-  { name: 'snow', displayName: 'Snow', category: 'Hundred Rabbits' },
-  { name: 'soyuz', displayName: 'Soyuz', category: 'Hundred Rabbits' },
   { name: 'teenage', displayName: 'Teenage', category: 'Hundred Rabbits' },
   { name: 'zenburn', displayName: 'Zenburn', category: 'Hundred Rabbits' }
 ];
