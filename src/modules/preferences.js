@@ -1,5 +1,3 @@
-// src/modules/preferences.js - Enhanced with Theme Manager
-
 import { Theme, DEFAULT_THEME_LIST, loadDefaultTheme } from '../lib/theme.js';
 
 let theme = null;

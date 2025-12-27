@@ -1,5 +1,3 @@
-// src/lib/theme.js - Hundred Rabbits Theme System
-
 export class Theme {
   constructor() {
     this.active = null;

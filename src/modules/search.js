@@ -1,5 +1,3 @@
-// src/modules/search.js
-
 import { formatDuration } from '../utils/formatters.js';
 
 let currentSearchSource = 'youtube';

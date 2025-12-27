@@ -1,5 +1,3 @@
-// src/modules/download.js
-
 import { formatTimestamp } from '../utils/formatters.js';
 
 let downloads = [];

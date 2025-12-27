@@ -1,5 +1,3 @@
-// src/modules/playlists.js
-
 let currentEditingPlaylist = null;
 let availableSongsCache = [];
 let draggedElement = null;

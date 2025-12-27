@@ -1,5 +1,3 @@
-// src/modules/tabs.js
-
 /**
  * Initialize main tab switching functionality
  */

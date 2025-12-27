@@ -1,5 +1,3 @@
-// src/modules/player.js
-
 let isPlaying = false;
 
 /**
