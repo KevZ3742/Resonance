@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:">
     <title>Resonance</title>
   </head>
   <body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
@@ -54,9 +55,69 @@
 
             <!-- Library Tab -->
             <div class="tab-content h-full overflow-y-auto p-6 hidden" id="library-tab">
-              <h2 class="text-xl font-bold mb-4">Your Library</h2>
-              <div id="library-list" class="space-y-2">
-                <p class="text-neutral-400">No songs in library</p>
+              <!-- Library Sub-tabs -->
+              <div class="flex gap-2 mb-4">
+                <button class="library-tab-btn active px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition" data-library-tab="all-songs">
+                  All Songs
+                </button>
+                <button class="library-tab-btn px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition" data-library-tab="playlists">
+                  Playlists
+                </button>
+              </div>
+
+              <!-- All Songs View -->
+              <div class="library-tab-content" id="all-songs-view">
+                <h2 class="text-xl font-bold mb-4">All Songs</h2>
+                <div id="all-songs-list" class="space-y-2">
+                  <p class="text-neutral-400">No songs in library</p>
+                </div>
+              </div>
+
+              <!-- Playlists View -->
+              <div class="library-tab-content hidden" id="playlists-view">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-xl font-bold">Playlists</h2>
+                  <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition" id="create-playlist-btn">
+                    + New Playlist
+                  </button>
+                </div>
+                <div id="playlists-list" class="space-y-2">
+                  <p class="text-neutral-400">No playlists yet</p>
+                </div>
+              </div>
+
+              <!-- Playlist Edit View -->
+              <div class="library-tab-content hidden" id="playlist-edit-view">
+                <div class="flex items-center gap-2 mb-4">
+                  <button class="text-neutral-400 hover:text-white transition" id="back-to-playlists-btn">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </button>
+                  <h2 class="text-xl font-bold" id="playlist-edit-title">Playlist Name</h2>
+                </div>
+                
+                <!-- Add songs section -->
+                <div class="mb-4 pb-4 border-b border-neutral-700">
+                  <h3 class="text-sm font-semibold text-neutral-400 mb-2">Add Songs</h3>
+                  <input 
+                    type="text" 
+                    placeholder="Search available songs..." 
+                    class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
+                    id="available-songs-search"
+                  >
+                  <div id="available-songs-list" class="space-y-1 max-h-48 overflow-y-auto">
+                    <p class="text-neutral-500 text-sm">No songs available</p>
+                  </div>
+                </div>
+
+                <!-- Current playlist songs -->
+                <div>
+                  <h3 class="text-sm font-semibold text-neutral-400 mb-2">Songs in Playlist</h3>
+                  <div id="playlist-songs-list" class="space-y-2">
+                    <p class="text-neutral-400">No songs in this playlist</p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -121,7 +182,15 @@
                   </div>
                 </div>
                 <div id="download-history" class="mt-6">
-                  <h3 class="text-lg font-semibold mb-2">Recent Downloads</h3>
+                  <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold">Recent Downloads</h3>
+                    <button 
+                      class="bg-neutral-700 hover:bg-neutral-600 text-white text-sm py-2 px-4 rounded-lg transition"
+                      id="open-song-directory-btn"
+                    >
+                      Open Song Directory
+                    </button>
+                  </div>
                   <div id="download-list" class="space-y-2">
                     <p class="text-neutral-400">No downloads yet</p>
                   </div>
@@ -188,6 +257,53 @@
           <div class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer" id="progress-bar">
             <div class="bg-blue-500 h-1.5 rounded-full transition-all" id="progress" style="width: 0%"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Modal for Playlist Name -->
+    <div id="playlist-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-neutral-800 rounded-lg p-6 w-96">
+        <h3 class="text-xl font-bold mb-4">Create New Playlist</h3>
+        <input 
+          type="text" 
+          id="playlist-name-input" 
+          placeholder="Enter playlist name..." 
+          class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition"
+        >
+        <div class="flex gap-2 justify-end">
+          <button id="playlist-modal-cancel" class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg transition">
+            Cancel
+          </button>
+          <button id="playlist-modal-create" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preferences Modal -->
+    <div id="preferences-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-neutral-800 rounded-lg p-6 w-96">
+        <h3 class="text-xl font-bold mb-4">Preferences</h3>
+        
+        <!-- Theme Selection -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold mb-2">Theme</label>
+          <div class="flex gap-2">
+            <button id="theme-dark" class="theme-btn flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition">
+              Dark
+            </button>
+            <button id="theme-light" class="theme-btn flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition">
+              Light
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end">
+          <button id="preferences-close" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+            Close
+          </button>
         </div>
       </div>
     </div>

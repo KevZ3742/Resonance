@@ -167,7 +167,7 @@ function displaySearchResults(results, source) {
     return;
   }
   
-  searchResults.innerHTML = results.map(result => `
+  searchResults.innerHTML = results.map((result, index) => `
     <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result)}'>
       <div class="flex items-center gap-3">
         ${result.thumbnail ? `
@@ -185,15 +185,33 @@ function displaySearchResults(results, source) {
           ${result.duration ? `<p class="text-xs text-neutral-500">${formatDuration(result.duration)}</p>` : ''}
         </div>
         <div class="flex gap-2">
-          <button class="p-2 hover:bg-neutral-500 rounded-lg transition" onclick="addToQueue(event, ${JSON.stringify(result).replace(/"/g, '&quot;')})">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <button class="download-btn p-2 hover:bg-neutral-500 rounded-lg transition" id="download-btn-${index}" data-url="${result.url}">
+            <svg class="plus-icon w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            <svg class="loading-icon w-5 h-5 hidden animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg class="checkmark-icon w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
             </svg>
           </button>
         </div>
       </div>
     </div>
   `).join('');
+  
+  // Add event listeners to all download buttons
+  results.forEach((result, index) => {
+    const btn = document.getElementById(`download-btn-${index}`);
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadFromSearch(result.url, btn);
+      });
+    }
+  });
 }
 
 function formatDuration(seconds) {
@@ -202,11 +220,39 @@ function formatDuration(seconds) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-window.addToQueue = (event, result) => {
-  event.stopPropagation();
-  console.log('Add to queue:', result);
-  // TODO: Implement queue functionality
-};
+async function downloadFromSearch(url, buttonElement) {
+  const plusIcon = buttonElement.querySelector('.plus-icon');
+  const loadingIcon = buttonElement.querySelector('.loading-icon');
+  const checkmarkIcon = buttonElement.querySelector('.checkmark-icon');
+  
+  // Disable button and show loading
+  buttonElement.disabled = true;
+  plusIcon.classList.add('hidden');
+  loadingIcon.classList.remove('hidden');
+  
+  try {
+    await window.electronAPI.downloadSong(url);
+    
+    // Show checkmark on success
+    loadingIcon.classList.add('hidden');
+    checkmarkIcon.classList.remove('hidden');
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      checkmarkIcon.classList.add('hidden');
+      plusIcon.classList.remove('hidden');
+      buttonElement.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Download failed:', error);
+    
+    // Reset button on error
+    loadingIcon.classList.add('hidden');
+    plusIcon.classList.remove('hidden');
+    buttonElement.disabled = false;
+  }
+}
 
 // Download functionality
 const downloadUrlInput = document.getElementById('download-url-input');
@@ -269,6 +315,17 @@ window.electronAPI.onDownloadComplete((data) => {
   // Add to download history
   addToDownloadHistory(data.filename, data.path);
   
+  // Refresh available songs list if we're currently editing a playlist
+  if (currentEditingPlaylist) {
+    loadAvailableSongs(currentEditingPlaylist);
+  }
+  
+  // Refresh all songs list if we're on the library tab
+  const allSongsView = document.getElementById('all-songs-view');
+  if (allSongsView && !allSongsView.classList.contains('hidden')) {
+    loadAllSongs();
+  }
+  
   // Hide progress after a delay
   setTimeout(() => {
     downloadProgressContainer.classList.add('hidden');
@@ -322,14 +379,9 @@ function addToDownloadHistory(filename, filepath) {
   // Update UI
   if (downloads.length > 0) {
     downloadList.innerHTML = downloads.map((download, index) => `
-      <div class="bg-neutral-700 rounded-lg p-3 flex justify-between items-center">
-        <div class="flex-1">
-          <p class="text-white font-medium truncate">${download.filename}</p>
-          <p class="text-xs text-neutral-400">${formatTimestamp(download.timestamp)}</p>
-        </div>
-        <button class="text-blue-400 hover:text-blue-300 text-sm" onclick="openFolder('${download.filepath.replace(/\\/g, '\\\\')}')">
-          Open Folder
-        </button>
+      <div class="bg-neutral-700 rounded-lg p-3">
+        <p class="text-white font-medium truncate">${download.filename}</p>
+        <p class="text-xs text-neutral-400">${formatTimestamp(download.timestamp)}</p>
       </div>
     `).join('');
   }
@@ -349,9 +401,625 @@ function formatTimestamp(date) {
   return date.toLocaleDateString();
 }
 
-function openFolder(folderPath) {
-  // This would need to be implemented via IPC if we want to open the folder
-  console.log('Open folder:', folderPath);
+async function openFolder(folderPath) {
+  try {
+    await window.electronAPI.openFolder(folderPath);
+  } catch (error) {
+    console.error('Failed to open folder:', error);
+  }
 }
+
+// Open Song Directory button
+const openSongDirectoryBtn = document.getElementById('open-song-directory-btn');
+if (openSongDirectoryBtn) {
+  openSongDirectoryBtn.addEventListener('click', async () => {
+    try {
+      const downloadsPath = await window.electronAPI.getDownloadsPath();
+      await openFolder(downloadsPath);
+    } catch (error) {
+      console.error('Failed to open song directory:', error);
+    }
+  });
+}
+
+// ===== PLAYLIST MANAGEMENT =====
+
+// Library sub-tab switching
+const libraryTabButtons = document.querySelectorAll('.library-tab-btn');
+const libraryTabContents = document.querySelectorAll('.library-tab-content');
+
+libraryTabButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const tabName = button.getAttribute('data-library-tab');
+    
+    // Remove active class from all buttons and hide all content
+    libraryTabButtons.forEach(btn => {
+      btn.classList.remove('active', 'bg-blue-500');
+      btn.classList.add('bg-neutral-700');
+    });
+    libraryTabContents.forEach(content => content.classList.add('hidden'));
+    
+    // Add active class to clicked button and show corresponding content
+    button.classList.add('active', 'bg-blue-500');
+    button.classList.remove('bg-neutral-700');
+    document.getElementById(`${tabName}-view`).classList.remove('hidden');
+    
+    // Load data when switching tabs
+    if (tabName === 'all-songs') {
+      loadAllSongs();
+    } else if (tabName === 'playlists') {
+      loadPlaylists();
+    }
+  });
+});
+
+// Load all songs
+async function loadAllSongs() {
+  try {
+    const songs = await window.electronAPI.listAllSongs();
+    const allSongsList = document.getElementById('all-songs-list');
+    
+    if (songs.length === 0) {
+      allSongsList.innerHTML = '<p class="text-neutral-400">No songs in library</p>';
+      return;
+    }
+    
+    allSongsList.innerHTML = songs.map(song => `
+      <div class="bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg cursor-pointer transition flex justify-between items-center">
+        <div class="flex-1">
+          <div class="font-medium">${song}</div>
+        </div>
+        <button class="text-blue-400 hover:text-blue-300 text-sm px-3 py-1">
+          Play
+        </button>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Failed to load songs:', error);
+  }
+}
+
+// Load playlists
+async function loadPlaylists() {
+  try {
+    const playlists = await window.electronAPI.listPlaylists();
+    const playlistsList = document.getElementById('playlists-list');
+    
+    if (playlists.length === 0) {
+      playlistsList.innerHTML = '<p class="text-neutral-400">No playlists yet</p>';
+      return;
+    }
+    
+    playlistsList.innerHTML = playlists.map(playlist => `
+      <div class="bg-neutral-700 hover:bg-neutral-600 p-4 rounded-lg cursor-pointer transition flex justify-between items-center playlist-item" data-playlist="${playlist}">
+        <div class="flex items-center gap-3">
+          <svg class="w-10 h-10 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+          </svg>
+          <div>
+            <div class="font-medium text-lg">${playlist}</div>
+            <div class="text-neutral-400 text-sm" id="playlist-${playlist}-count">Loading...</div>
+          </div>
+        </div>
+        <button class="text-blue-400 hover:text-blue-300">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </button>
+      </div>
+    `).join('');
+    
+    // Load song counts for each playlist
+    for (const playlist of playlists) {
+      try {
+        const songs = await window.electronAPI.listPlaylistSongs(playlist);
+        const countElement = document.getElementById(`playlist-${playlist}-count`);
+        if (countElement) {
+          countElement.textContent = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+        }
+      } catch (error) {
+        console.error(`Failed to load song count for ${playlist}:`, error);
+      }
+    }
+    
+    // Add click handlers for playlist items
+    document.querySelectorAll('.playlist-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const playlistName = item.getAttribute('data-playlist');
+        openPlaylistEditor(playlistName);
+      });
+    });
+  } catch (error) {
+    console.error('Failed to load playlists:', error);
+  }
+}
+
+// Custom Modal Functions
+function showPlaylistModal() {
+  const modal = document.getElementById('playlist-modal');
+  const input = document.getElementById('playlist-name-input');
+  modal.classList.remove('hidden');
+  input.value = '';
+  input.focus();
+}
+
+function hidePlaylistModal() {
+  const modal = document.getElementById('playlist-modal');
+  modal.classList.add('hidden');
+}
+
+// Create new playlist
+const createPlaylistBtn = document.getElementById('create-playlist-btn');
+const playlistModalCreate = document.getElementById('playlist-modal-create');
+const playlistModalCancel = document.getElementById('playlist-modal-cancel');
+const playlistNameInput = document.getElementById('playlist-name-input');
+
+if (createPlaylistBtn) {
+  createPlaylistBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showPlaylistModal();
+  });
+}
+
+// Alternative: Use event delegation
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'create-playlist-btn' || e.target.closest('#create-playlist-btn')) {
+    e.preventDefault();
+    e.stopPropagation();
+    showPlaylistModal();
+  }
+});
+
+if (playlistModalCancel) {
+  playlistModalCancel.addEventListener('click', () => {
+    hidePlaylistModal();
+  });
+}
+
+if (playlistModalCreate) {
+  playlistModalCreate.addEventListener('click', async () => {
+    const playlistName = playlistNameInput.value.trim();
+    if (!playlistName) return;
+    
+    try {
+      await window.electronAPI.createPlaylist(playlistName);
+      hidePlaylistModal();
+      await loadPlaylists();
+    } catch (error) {
+      console.error('Failed to create playlist:', error);
+      alert('Failed to create playlist: ' + error.message);
+    }
+  });
+}
+
+// Allow Enter key to create playlist
+if (playlistNameInput) {
+  playlistNameInput.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const playlistName = playlistNameInput.value.trim();
+      if (!playlistName) return;
+      
+      try {
+        await window.electronAPI.createPlaylist(playlistName);
+        hidePlaylistModal();
+        await loadPlaylists();
+      } catch (error) {
+        console.error('Failed to create playlist:', error);
+        alert('Failed to create playlist: ' + error.message);
+      }
+    }
+  });
+}
+
+// Open playlist editor
+let currentEditingPlaylist = null;
+
+async function openPlaylistEditor(playlistName) {
+  currentEditingPlaylist = playlistName;
+  
+  // Hide playlists view, show editor view
+  document.getElementById('playlists-view').classList.add('hidden');
+  document.getElementById('playlist-edit-view').classList.remove('hidden');
+  
+  // Set title
+  document.getElementById('playlist-edit-title').textContent = playlistName;
+  
+  // Load available songs and playlist songs
+  await loadPlaylistSongs(playlistName);
+  await loadAvailableSongs(playlistName);
+}
+
+// Back to playlists button
+const backToPlaylistsBtn = document.getElementById('back-to-playlists-btn');
+if (backToPlaylistsBtn) {
+  backToPlaylistsBtn.addEventListener('click', () => {
+    document.getElementById('playlist-edit-view').classList.add('hidden');
+    document.getElementById('playlists-view').classList.remove('hidden');
+    currentEditingPlaylist = null;
+    loadPlaylists();
+  });
+}
+
+// Load available songs for adding to playlist
+let availableSongsCache = [];
+
+async function loadAvailableSongs(playlistName) {
+  try {
+    const allSongs = await window.electronAPI.listAllSongs();
+    const playlistSongs = await window.electronAPI.listPlaylistSongs(playlistName);
+    const availableSongsList = document.getElementById('available-songs-list');
+    const searchInput = document.getElementById('available-songs-search');
+    
+    // Filter out songs that are already in the playlist
+    // Remove .ref extension from playlist songs for comparison
+    const playlistSongNames = playlistSongs.map(song => song.replace('.ref', ''));
+    const availableSongs = allSongs.filter(song => !playlistSongNames.includes(song));
+    
+    // Cache the available songs for search filtering
+    availableSongsCache = availableSongs;
+    
+    // Setup search functionality
+    setupAvailableSongsSearch();
+    
+    // Preserve the search query and filter accordingly
+    const currentQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (currentQuery) {
+      const filteredSongs = availableSongs.filter(song => 
+        song.toLowerCase().includes(currentQuery)
+      );
+      renderAvailableSongs(filteredSongs);
+    } else {
+      renderAvailableSongs(availableSongs);
+    }
+  } catch (error) {
+    console.error('Failed to load available songs:', error);
+  }
+}
+
+function renderAvailableSongs(songs) {
+  const availableSongsList = document.getElementById('available-songs-list');
+  
+  if (songs.length === 0) {
+    const searchInput = document.getElementById('available-songs-search');
+    const hasSearchQuery = searchInput && searchInput.value.trim();
+    
+    if (hasSearchQuery) {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs match your search</p>';
+    } else if (availableSongsCache.length === 0) {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs available (all songs are in this playlist)</p>';
+    } else {
+      availableSongsList.innerHTML = '<p class="text-neutral-500 text-sm">No songs available</p>';
+    }
+    return;
+  }
+  
+  availableSongsList.innerHTML = songs.map(song => `
+    <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
+      <span class="text-sm truncate flex-1">${song}</span>
+      <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1" data-song="${song}">
+        + Add
+      </button>
+    </div>
+  `).join('');
+  
+  // Add click handlers
+  document.querySelectorAll('.add-song-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const songName = btn.getAttribute('data-song');
+      await addSongToPlaylist(currentEditingPlaylist, songName);
+    });
+  });
+}
+
+function setupAvailableSongsSearch() {
+  const searchInput = document.getElementById('available-songs-search');
+  if (!searchInput) return;
+  
+  // Remove previous listener if exists
+  const newSearchInput = searchInput.cloneNode(true);
+  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+  
+  newSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (!query) {
+      renderAvailableSongs(availableSongsCache);
+      return;
+    }
+    
+    const filteredSongs = availableSongsCache.filter(song => 
+      song.toLowerCase().includes(query)
+    );
+    
+    renderAvailableSongs(filteredSongs);
+  });
+}
+
+// Load songs in current playlist
+async function loadPlaylistSongs(playlistName) {
+  try {
+    let songs = await window.electronAPI.listPlaylistSongs(playlistName);
+    const playlistSongsList = document.getElementById('playlist-songs-list');
+    
+    if (songs.length === 0) {
+      playlistSongsList.innerHTML = '<p class="text-neutral-400">No songs in this playlist</p>';
+      return;
+    }
+    
+    // Get saved order and apply it
+    const savedOrder = await window.electronAPI.getPlaylistOrder(playlistName);
+    if (savedOrder && savedOrder.length > 0) {
+      // Sort songs according to saved order
+      const orderedSongs = [];
+      for (const orderedSong of savedOrder) {
+        if (songs.includes(orderedSong)) {
+          orderedSongs.push(orderedSong);
+        }
+      }
+      // Add any songs not in the saved order at the end
+      for (const song of songs) {
+        if (!orderedSongs.includes(song)) {
+          orderedSongs.push(song);
+        }
+      }
+      songs = orderedSongs;
+    }
+    
+    playlistSongsList.innerHTML = songs.map((song, index) => `
+      <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition flex items-center gap-3" data-song="${song}" data-index="${index}" draggable="true">
+        <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-medium">${song.replace('.ref', '')}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="text-blue-400 hover:text-blue-300 text-sm px-3 py-1">
+            Play
+          </button>
+          <button class="remove-song-btn text-red-400 hover:text-red-300 text-sm px-3 py-1" data-song="${song}">
+            Remove
+          </button>
+        </div>
+      </div>
+    `).join('');
+    
+    // Add remove handlers
+    document.querySelectorAll('.remove-song-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const songName = btn.getAttribute('data-song');
+        await removeSongFromPlaylist(playlistName, songName);
+      });
+    });
+    
+    // Add drag and drop handlers
+    setupDragAndDrop(playlistName);
+  } catch (error) {
+    console.error('Failed to load playlist songs:', error);
+  }
+}
+
+// Add song to playlist
+async function addSongToPlaylist(playlistName, songFilename) {
+  try {
+    await window.electronAPI.addToPlaylist(playlistName, songFilename);
+    await loadPlaylistSongs(playlistName);
+    await loadAvailableSongs(playlistName);
+  } catch (error) {
+    console.error('Failed to add song to playlist:', error);
+    alert('Failed to add song: ' + error.message);
+  }
+}
+
+// Remove song from playlist
+async function removeSongFromPlaylist(playlistName, songFilename) {
+  try {
+    await window.electronAPI.removeFromPlaylist(playlistName, songFilename);
+    await loadPlaylistSongs(playlistName);
+    await loadAvailableSongs(playlistName);
+  } catch (error) {
+    console.error('Failed to remove song from playlist:', error);
+    alert('Failed to remove song: ' + error.message);
+  }
+}
+
+// Load all songs when library tab is opened
+const libraryTabBtn = document.querySelector('[data-tab="library"]');
+if (libraryTabBtn) {
+  libraryTabBtn.addEventListener('click', () => {
+    // Load all songs by default when opening library tab
+    setTimeout(() => loadAllSongs(), 100);
+  });
+}
+
+// ===== THEME & PREFERENCES =====
+
+// Load saved theme on startup
+async function loadTheme() {
+  try {
+    const theme = await window.electronAPI.getTheme();
+    applyTheme(theme);
+  } catch (error) {
+    console.error('Failed to load theme:', error);
+    applyTheme('dark');
+  }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'light') {
+    root.classList.add('light');
+  } else {
+    root.classList.remove('light');
+  }
+  updateThemeButtons(theme);
+}
+
+function updateThemeButtons(theme) {
+  const darkBtn = document.getElementById('theme-dark');
+  const lightBtn = document.getElementById('theme-light');
+  
+  if (darkBtn && lightBtn) {
+    if (theme === 'dark') {
+      darkBtn.classList.add('bg-blue-500');
+      darkBtn.classList.remove('bg-neutral-700');
+      lightBtn.classList.remove('bg-blue-500');
+      lightBtn.classList.add('bg-neutral-700');
+    } else {
+      lightBtn.classList.add('bg-blue-500');
+      lightBtn.classList.remove('bg-neutral-700');
+      darkBtn.classList.remove('bg-blue-500');
+      darkBtn.classList.add('bg-neutral-700');
+    }
+  }
+}
+
+// Preferences modal
+function showPreferencesModal() {
+  const modal = document.getElementById('preferences-modal');
+  modal.classList.remove('hidden');
+  
+  // Load current theme
+  loadTheme();
+}
+
+function hidePreferencesModal() {
+  const modal = document.getElementById('preferences-modal');
+  modal.classList.add('hidden');
+}
+
+// Listen for preferences menu command
+if (window.electronAPI.onOpenPreferences) {
+  window.electronAPI.onOpenPreferences(() => {
+    showPreferencesModal();
+  });
+}
+
+// Theme buttons
+const themeDarkBtn = document.getElementById('theme-dark');
+const themeLightBtn = document.getElementById('theme-light');
+const preferencesCloseBtn = document.getElementById('preferences-close');
+
+if (themeDarkBtn) {
+  themeDarkBtn.addEventListener('click', async () => {
+    try {
+      await window.electronAPI.setTheme('dark');
+      applyTheme('dark');
+    } catch (error) {
+      console.error('Failed to set theme:', error);
+    }
+  });
+}
+
+if (themeLightBtn) {
+  themeLightBtn.addEventListener('click', async () => {
+    try {
+      await window.electronAPI.setTheme('light');
+      applyTheme('light');
+    } catch (error) {
+      console.error('Failed to set theme:', error);
+    }
+  });
+}
+
+if (preferencesCloseBtn) {
+  preferencesCloseBtn.addEventListener('click', () => {
+    hidePreferencesModal();
+  });
+}
+
+// Drag and drop functionality for playlist reordering
+let draggedElement = null;
+let draggedIndex = null;
+
+function setupDragAndDrop(playlistName) {
+  const playlistItems = document.querySelectorAll('.playlist-song-item');
+  
+  playlistItems.forEach(item => {
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', (e) => handleDrop(e, playlistName));
+    item.addEventListener('dragenter', handleDragEnter);
+    item.addEventListener('dragleave', handleDragLeave);
+    item.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+function handleDragStart(e) {
+  draggedElement = e.currentTarget;
+  draggedIndex = parseInt(draggedElement.getAttribute('data-index'));
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(e) {
+  if (e.currentTarget.classList.contains('playlist-song-item')) {
+    e.currentTarget.classList.add('border-2', 'border-blue-500');
+  }
+}
+
+function handleDragLeave(e) {
+  if (e.currentTarget.classList.contains('playlist-song-item')) {
+    e.currentTarget.classList.remove('border-2', 'border-blue-500');
+  }
+}
+
+async function handleDrop(e, playlistName) {
+  if (e.stopPropagation) {
+    e.stopPropagation();
+  }
+  
+  const targetElement = e.currentTarget;
+  const targetIndex = parseInt(targetElement.getAttribute('data-index'));
+  
+  if (draggedElement !== targetElement) {
+    // Get all songs in current order
+    const allItems = Array.from(document.querySelectorAll('.playlist-song-item'));
+    const songs = allItems.map(item => item.getAttribute('data-song'));
+    
+    // Reorder the array
+    const draggedSong = songs[draggedIndex];
+    songs.splice(draggedIndex, 1);
+    songs.splice(targetIndex, 0, draggedSong);
+    
+    // Save the new order
+    try {
+      await window.electronAPI.reorderPlaylistSongs(playlistName, songs);
+      // Reload to show new order
+      await loadPlaylistSongs(playlistName);
+    } catch (error) {
+      console.error('Failed to reorder songs:', error);
+      alert('Failed to reorder songs: ' + error.message);
+    }
+  }
+  
+  targetElement.classList.remove('border-2', 'border-blue-500');
+  return false;
+}
+
+function handleDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  
+  // Remove all drag indicators
+  document.querySelectorAll('.playlist-song-item').forEach(item => {
+    item.classList.remove('border-2', 'border-blue-500');
+  });
+}
+
+// Load theme on startup
+loadTheme();
 
 console.log('Resonance Music Player loaded');
