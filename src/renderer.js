@@ -315,6 +315,17 @@ window.electronAPI.onDownloadComplete((data) => {
   // Add to download history
   addToDownloadHistory(data.filename, data.path);
   
+  // Refresh available songs list if we're currently editing a playlist
+  if (currentEditingPlaylist) {
+    loadAvailableSongs(currentEditingPlaylist);
+  }
+  
+  // Refresh all songs list if we're on the library tab
+  const allSongsView = document.getElementById('all-songs-view');
+  if (allSongsView && !allSongsView.classList.contains('hidden')) {
+    loadAllSongs();
+  }
+  
   // Hide progress after a delay
   setTimeout(() => {
     downloadProgressContainer.classList.add('hidden');
