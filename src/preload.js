@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPlaylistOrder: (playlistName) => ipcRenderer.invoke('get-playlist-order', playlistName),
   getTheme: () => ipcRenderer.invoke('get-theme'),
   setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
+  getCustomThemes: () => ipcRenderer.invoke('get-custom-themes'),
+  setCustomThemes: (themes) => ipcRenderer.invoke('set-custom-themes', themes),
+  exportTheme: (filename, svg) => ipcRenderer.invoke('export-theme', filename, svg),
   onOpenPreferences: (callback) => {
     ipcRenderer.on('open-preferences', () => callback());
   },

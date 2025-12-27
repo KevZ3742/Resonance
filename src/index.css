@@ -1,39 +1,40 @@
 @import "tailwindcss";
 
-/* Theme Variables */
+/* Theme Variables - Will be overridden by theme.js */
 :root {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #171717;
-  --bg-tertiary: #262626;
-  --bg-hover: #404040;
-  --text-primary: #ffffff;
-  --text-secondary: #a3a3a3;
-  --border-color: #404040;
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-  --scrollbar-track: #171717;
-  --scrollbar-thumb: #404040;
-  --scrollbar-thumb-hover: #525252;
-}
-
-:root.light {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #e5e5e5;
-  --bg-hover: #d4d4d4;
-  --text-primary: #0a0a0a;
-  --text-secondary: #525252;
-  --border-color: #d4d4d4;
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-  --scrollbar-track: #f5f5f5;
-  --scrollbar-thumb: #d4d4d4;
-  --scrollbar-thumb-hover: #a3a3a3;
+  /* Hundred Rabbits theme colors */
+  --background: #000000;
+  --f_high: #ffffff;
+  --f_med: #b0b0b0;
+  --f_low: #808080;
+  --f_inv: #000000;
+  --b_high: #202020;
+  --b_med: #303030;
+  --b_low: #101010;
+  --b_inv: #72dec2;
+  
+  /* Resonance mapped variables */
+  --bg-primary: var(--background);
+  --bg-secondary: var(--b_low);
+  --bg-tertiary: var(--b_med);
+  --bg-hover: var(--b_high);
+  --text-primary: var(--f_high);
+  --text-secondary: var(--f_med);
+  --border-color: var(--b_med);
+  --accent-color: var(--b_inv);
+  --accent-hover: var(--f_inv);
+  --scrollbar-track: var(--b_low);
+  --scrollbar-thumb: var(--b_med);
+  --scrollbar-thumb-hover: var(--b_high);
 }
 
 /* Override Tailwind neutral colors with theme variables */
 .bg-neutral-950 {
   background-color: var(--bg-primary) !important;
+}
+
+.bg-neutral-900 {
+  background-color: var(--b_low) !important;
 }
 
 .bg-neutral-800 {
@@ -53,10 +54,20 @@
   background-color: var(--bg-hover) !important;
 }
 
-.text-neutral-300,
-.text-neutral-400,
+.text-neutral-300 {
+  color: var(--f_low) !important;
+}
+
+.text-neutral-400 {
+  color: var(--f_med) !important;
+}
+
 .text-neutral-500 {
-  color: var(--text-secondary) !important;
+  color: var(--f_low) !important;
+}
+
+.text-neutral-600 {
+  color: var(--b_high) !important;
 }
 
 .text-white {
@@ -82,7 +93,7 @@
 }
 
 .hover\:text-blue-300:hover {
-  color: var(--accent-hover) !important;
+  color: var(--f_low) !important;
 }
 
 .border-blue-500 {
@@ -93,12 +104,39 @@
   border-color: var(--accent-color) !important;
 }
 
+/* Red colors for delete buttons */
+.bg-red-700 {
+  background-color: #991b1b !important;
+}
+
+.hover\:bg-red-600:hover {
+  background-color: #dc2626 !important;
+}
+
+.text-red-400 {
+  color: #f87171 !important;
+}
+
+.hover\:text-red-300:hover {
+  color: #fca5a5 !important;
+}
+
+/* Green colors for success states */
+.bg-green-900\/30 {
+  background-color: rgba(20, 83, 45, 0.3) !important;
+}
+
+.border-green-500 {
+  border-color: #22c55e !important;
+}
+
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Custom scrollbar */
@@ -136,4 +174,20 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
   border-radius: 50%;
   border: none;
+}
+
+/* Drag and drop visual feedback */
+body.dragging-theme::before {
+  content: "Drop theme file to load";
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--f_high);
+  font-size: 2rem;
+  font-weight: bold;
+  z-index: 9999;
+  pointer-events: none;
 }

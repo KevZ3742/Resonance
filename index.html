@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:">
     <title>Resonance</title>
+    <script type="text/javascript" src="/src/lib/theme.js"></script>
   </head>
   <body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
     <div id="app" class="h-full flex flex-col p-4 gap-4">
@@ -284,25 +285,109 @@
 
     <!-- Preferences Modal -->
     <div id="preferences-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-neutral-800 rounded-lg p-6 w-96">
+      <div class="bg-neutral-800 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-4">Preferences</h3>
         
-        <!-- Theme Selection -->
+        <!-- Theme Management Section -->
         <div class="mb-6">
           <label class="block text-sm font-semibold mb-2">Theme</label>
-          <div class="flex gap-2">
-            <button id="theme-dark" class="theme-btn flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition">
-              Dark
+          
+          <!-- Current Theme Display -->
+          <div class="mb-3 flex items-center justify-between">
+            <span class="text-sm text-neutral-400">Current: <span id="current-theme-name" class="text-white font-medium">-</span></span>
+            <span class="text-xs text-neutral-500">Drop SVG files anywhere to load themes</span>
+          </div>
+          
+          <!-- Theme Selector -->
+          <select id="theme-select" class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:border-blue-500 transition">
+            <option value="">Loading themes...</option>
+          </select>
+
+          <!-- Theme Actions -->
+          <div class="flex gap-2 mb-4">
+            <button id="create-theme-btn" class="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition text-sm">
+              + New Theme
             </button>
-            <button id="theme-light" class="theme-btn flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition">
-              Light
+            <button id="export-theme-btn" class="flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition text-sm">
+              Export
             </button>
+            <button id="delete-theme-btn" class="flex-1 bg-red-700 hover:bg-red-600 px-4 py-2 rounded-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              Delete
+            </button>
+          </div>
+
+          <!-- Theme Preview/Editor -->
+          <div class="bg-neutral-900 rounded-lg p-4">
+            <p class="text-xs text-neutral-500 mb-3">Click on any color to edit (creates custom theme from defaults)</p>
+            
+            <!-- Background -->
+            <div class="mb-4">
+              <label class="block text-xs text-neutral-400 mb-1">Background</label>
+              <div class="flex gap-2 items-center">
+                <div id="color-background" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                <input type="color" id="input-background" class="hidden">
+              </div>
+            </div>
+
+            <!-- Foreground Colors -->
+            <div class="mb-4">
+              <label class="block text-xs text-neutral-400 mb-2">Foreground</label>
+              <div class="grid grid-cols-4 gap-2">
+                <div>
+                  <div id="color-f_high" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-f_high" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
+                </div>
+                <div>
+                  <div id="color-f_med" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-f_med" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
+                </div>
+                <div>
+                  <div id="color-f_low" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-f_low" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
+                </div>
+                <div>
+                  <div id="color-f_inv" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-f_inv" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Background Colors -->
+            <div>
+              <label class="block text-xs text-neutral-400 mb-2">Background Shades</label>
+              <div class="grid grid-cols-4 gap-2">
+                <div>
+                  <div id="color-b_high" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-b_high" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
+                </div>
+                <div>
+                  <div id="color-b_med" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-b_med" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
+                </div>
+                <div>
+                  <div id="color-b_low" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-b_low" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
+                </div>
+                <div>
+                  <div id="color-b_inv" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
+                  <input type="color" id="input-b_inv" class="hidden">
+                  <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="flex gap-2 justify-end">
-          <button id="preferences-close" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
-            Close
+          <button id="preferences-close" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
+            Done
           </button>
         </div>
       </div>
