@@ -175,6 +175,7 @@ ipcMain.handle('search-songs', async (event, query, source) => {
       const result = await youtubeDl.execPromise([
         `ytsearch10:${query}`,
         '--dump-json',
+        '--flat-playlist',
         '--no-playlist'
       ]);
       
@@ -203,6 +204,7 @@ ipcMain.handle('search-songs', async (event, query, source) => {
       const result = await youtubeDl.execPromise([
         `scsearch10:${query}`,
         '--dump-json',
+        '--flat-playlist',
         '--no-playlist'
       ]);
       
