@@ -190,8 +190,8 @@ ipcMain.handle('search-songs', async (event, query, source) => {
             artist: data.uploader,
             uploader: data.uploader,
             duration: data.duration,
-            thumbnail: data.thumbnail,
-            url: data.webpage_url,
+            thumbnail: data.thumbnail || `https://i.ytimg.com/vi/${data.id}/mqdefault.jpg`,
+            url: data.webpage_url || `https://www.youtube.com/watch?v=${data.id}`,
             source: 'youtube'
           };
         } catch (e) {
@@ -218,8 +218,8 @@ ipcMain.handle('search-songs', async (event, query, source) => {
             artist: data.uploader,
             uploader: data.uploader,
             duration: data.duration,
-            thumbnail: data.thumbnail,
-            url: data.webpage_url,
+            thumbnail: data.thumbnail || data.thumbnails?.[0]?.url,
+            url: data.webpage_url || data.url,
             source: 'soundcloud'
           };
         } catch (e) {
