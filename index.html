@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:">
     <title>Resonance</title>
-    <script type="text/javascript" src="/src/lib/theme.js"></script>
+    <script type="module" src="/src/lib/theme.js"></script>
   </head>
   <body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
     <div id="app" class="h-full flex flex-col p-4 gap-4">
@@ -285,11 +285,13 @@
 
     <!-- Preferences Modal -->
     <div id="preferences-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-neutral-800 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
-        <h3 class="text-xl font-bold mb-4">Preferences</h3>
+      <div class="bg-neutral-800 rounded-2xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
+        <h3 class="text-xl font-bold mb-4 px-6 pt-6">Preferences</h3>
         
-        <!-- Theme Management Section -->
-        <div class="mb-6">
+        <!-- Scrollable Content -->
+        <div class="overflow-y-auto flex-1 px-6">
+          <!-- Theme Management Section -->
+          <div class="mb-6">
           <label class="block text-sm font-semibold mb-2">Theme</label>
           
           <!-- Current Theme Display -->
@@ -384,8 +386,9 @@
             </div>
           </div>
         </div>
+        <!-- End Scrollable Content -->
 
-        <div class="flex gap-2 justify-end">
+        <div class="flex gap-2 justify-end px-6 pb-6 pt-4">
           <button id="preferences-close" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
             Done
           </button>
