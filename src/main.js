@@ -212,13 +212,22 @@ ipcMain.handle('search-songs', async (event, query, source) => {
       searchResults = lines.map(line => {
         try {
           const data = JSON.parse(line);
+          let thumbnail = data.thumbnail || data.thumbnails?.[0]?.url;
+          // Upgrade SoundCloud thumbnails to highest quality
+          if (thumbnail && thumbnail.includes('sndcdn.com')) {
+            thumbnail = thumbnail
+              .replace(/-small\.jpg.*$/, '-t500x500.jpg')
+              .replace(/-large\.jpg.*$/, '-t500x500.jpg')
+              .replace(/-t\d+x\d+\.jpg.*$/, '-t500x500.jpg')
+              .replace(/-\w+\.jpg.*$/, '-t500x500.jpg');
+          }
           return {
             id: data.id,
             title: data.title,
             artist: data.uploader,
             uploader: data.uploader,
             duration: data.duration,
-            thumbnail: data.thumbnail || data.thumbnails?.[0]?.url,
+            thumbnail: thumbnail,
             url: data.webpage_url || data.url,
             source: 'soundcloud'
           };
