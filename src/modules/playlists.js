@@ -502,9 +502,8 @@ function handleDragStart(e) {
 }
 
 function handleDragOver(e) {
-  if (e.preventDefault) {
-    e.preventDefault();
-  }
+  e.preventDefault();
+  e.stopPropagation();
   e.dataTransfer.dropEffect = 'move';
   return false;
 }
@@ -522,9 +521,8 @@ function handleDragLeave(e) {
 }
 
 async function handleDrop(e, playlistName) {
-  if (e.stopPropagation) {
-    e.stopPropagation();
-  }
+  e.preventDefault();
+  e.stopPropagation();
   
   const targetElement = e.currentTarget;
   const targetIndex = parseInt(targetElement.getAttribute('data-index'));
@@ -534,10 +532,15 @@ async function handleDrop(e, playlistName) {
     const allItems = Array.from(document.querySelectorAll('.playlist-song-item'));
     const songs = allItems.map(item => item.getAttribute('data-song'));
     
+    console.log('Reordering from index', draggedIndex, 'to', targetIndex);
+    console.log('Before:', songs);
+    
     // Reorder the array
     const draggedSong = songs[draggedIndex];
     songs.splice(draggedIndex, 1);
     songs.splice(targetIndex, 0, draggedSong);
+    
+    console.log('After:', songs);
     
     // Save the new order
     try {
