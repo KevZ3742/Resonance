@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'fs';
 import ffmpegStatic from 'ffmpeg-static';
 import { youtubeDl } from '../ytdlp.js';
-import { ensureDownloadsDir, getAllSongsPath, getDownloadsPath } from '../paths.js';
+import { ensureDownloadsDir, getAllSongsPath, getResonanceDataPath } from '../paths.js';
 
 /**
  * Register download-related IPC handlers
@@ -90,9 +90,9 @@ export function registerDownloadHandlers() {
     }
   });
 
-  // Handle getting downloads path
+  // Handle getting Resonance data path (where songs are stored)
   ipcMain.handle('get-downloads-path', async () => {
-    return getDownloadsPath();
+    return getResonanceDataPath();
   });
 
   // Handle getting all songs path

@@ -1,39 +1,47 @@
 import path from 'node:path';
 import fs from 'fs';
-import os from 'os';
+import { app } from 'electron';
 
 /**
- * Get downloads directory (base Resonance directory)
+ * Get the base Resonance data directory (inside app user data)
  */
-export function getDownloadsPath() {
-  return path.join(os.homedir(), 'Downloads', 'Resonance');
+export function getResonanceDataPath() {
+  return path.join(app.getPath('userData'), 'Resonance');
 }
 
 /**
- * Get all songs directory
+ * Get user's Downloads directory (for exported themes)
+ * This remains in the user's Downloads folder for easy access
+ */
+export function getUserDownloadsPath() {
+  return app.getPath('downloads');
+}
+
+/**
+ * Get all songs directory (now in app data)
  */
 export function getAllSongsPath() {
-  return path.join(getDownloadsPath(), 'all songs');
+  return path.join(getResonanceDataPath(), 'all songs');
 }
 
 /**
- * Get playlists directory
+ * Get playlists directory (now in app data)
  */
 export function getPlaylistsPath() {
-  return path.join(getDownloadsPath(), 'playlists');
+  return path.join(getResonanceDataPath(), 'playlists');
 }
 
 /**
- * Ensure downloads directory exists with proper structure
+ * Ensure all necessary directories exist with proper structure
  */
 export function ensureDownloadsDir() {
-  const downloadsPath = getDownloadsPath();
+  const resonanceDataPath = getResonanceDataPath();
   const allSongsPath = getAllSongsPath();
   const playlistsPath = getPlaylistsPath();
   
-  // Create base directory
-  if (!fs.existsSync(downloadsPath)) {
-    fs.mkdirSync(downloadsPath, { recursive: true });
+  // Create base Resonance data directory
+  if (!fs.existsSync(resonanceDataPath)) {
+    fs.mkdirSync(resonanceDataPath, { recursive: true });
   }
   
   // Create 'all songs' directory
@@ -46,5 +54,5 @@ export function ensureDownloadsDir() {
     fs.mkdirSync(playlistsPath, { recursive: true });
   }
   
-  return downloadsPath;
+  return resonanceDataPath;
 }

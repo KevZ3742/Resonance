@@ -1,7 +1,7 @@
 import { ipcMain, app } from 'electron';
 import path from 'node:path';
 import fs from 'fs';
-import { getDownloadsPath } from '../paths.js';
+import { getUserDownloadsPath } from '../paths.js';
 
 /**
  * Register theme-related IPC handlers
@@ -72,10 +72,10 @@ export function registerThemeHandlers() {
     }
   });
 
-  // Handle exporting theme
+  // Handle exporting theme (exports directly to user's Downloads folder)
   ipcMain.handle('export-theme', async (event, filename, svgContent) => {
     try {
-      const downloadsPath = getDownloadsPath();
+      const downloadsPath = getUserDownloadsPath();
       const filePath = path.join(downloadsPath, filename);
       
       fs.writeFileSync(filePath, svgContent, 'utf8');
