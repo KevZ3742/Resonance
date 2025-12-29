@@ -117,6 +117,8 @@ function initVolumeControl() {
   const volumePercentage = document.getElementById('volume-percentage');
   const volumeIcon = document.getElementById('volume-icon');
 
+  let hideTimeout;
+
   // Update volume percentage display and slider fill
   const updateVolumeDisplay = (value) => {
     volumePercentage.textContent = `${value}%`;
@@ -143,19 +145,41 @@ function initVolumeControl() {
   // Initialize display
   updateVolumeDisplay(volumeSlider.value);
 
-  // Show slider when hovering over the entire volume container
+  // Show slider when hovering over the volume container
   volumeContainer.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimeout);
     sliderContainer.classList.remove('hidden');
   });
 
-  // Hide slider only when mouse leaves the entire volume container
-  volumeContainer.addEventListener('mouseleave', () => {
-    sliderContainer.classList.add('hidden');
+  // Hide slider with a small delay when mouse leaves
+  volumeContainer.addEventListener('mouseleave', (e) => {
+    // Check if mouse is moving to the slider
+    const sliderRect = sliderContainer.getBoundingClientRect();
+    const mouseY = e.clientY;
+    const mouseX = e.clientX;
+    
+    // If mouse is near the slider area, don't hide immediately
+    if (mouseY < sliderRect.bottom && mouseY > sliderRect.top - 20 &&
+        mouseX > sliderRect.left && mouseX < sliderRect.right) {
+      return;
+    }
+    
+    hideTimeout = setTimeout(() => {
+      sliderContainer.classList.add('hidden');
+    }, 100);
   });
   
-  // Also keep slider visible when hovering over the slider itself
+  // Keep slider visible when hovering over it
   sliderContainer.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimeout);
     sliderContainer.classList.remove('hidden');
+  });
+  
+  // Hide slider when leaving the slider itself
+  sliderContainer.addEventListener('mouseleave', () => {
+    hideTimeout = setTimeout(() => {
+      sliderContainer.classList.add('hidden');
+    }, 100);
   });
 }
 
