@@ -2,6 +2,7 @@ let isPlaying = false;
 let currentSong = null;
 let audioElement = null;
 let previousVolume = 0.7; // Store volume before mute
+let wasPlayingBeforeScrub = false; // Track if music was playing before scrubbing
 
 /**
  * Initialize music player controls
@@ -231,6 +232,13 @@ function initProgressBar() {
     
     isDragging = true;
     progressBar.classList.add('dragging');
+    
+    // Pause if currently playing
+    wasPlayingBeforeScrub = !audioElement.paused;
+    if (wasPlayingBeforeScrub) {
+      audioElement.pause();
+    }
+    
     updateProgressFromMouse(e, progressBar);
     e.preventDefault();
   });
@@ -245,6 +253,12 @@ function initProgressBar() {
     if (isDragging) {
       isDragging = false;
       progressBar.classList.remove('dragging');
+      
+      // Resume playback if it was playing before scrubbing
+      if (wasPlayingBeforeScrub) {
+        audioElement.play();
+        wasPlayingBeforeScrub = false;
+      }
     }
   });
 }
