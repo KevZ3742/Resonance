@@ -644,3 +644,35 @@ ipcMain.handle('export-theme', async (event, filename, svgContent) => {
     throw error;
   }
 });
+
+// Add these handlers to src/main.js (after the theme handlers)
+
+// Handle getting song metadata
+ipcMain.handle('get-metadata', async () => {
+  const userDataPath = app.getPath('userData');
+  const metadataPath = path.join(userDataPath, 'song-metadata.json');
+  
+  try {
+    if (fs.existsSync(metadataPath)) {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      return metadata;
+    }
+  } catch (error) {
+    console.error('Failed to read metadata:', error);
+  }
+  return {};
+});
+
+// Handle setting song metadata
+ipcMain.handle('set-metadata', async (event, metadata) => {
+  const userDataPath = app.getPath('userData');
+  const metadataPath = path.join(userDataPath, 'song-metadata.json');
+  
+  try {
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save metadata:', error);
+    throw error;
+  }
+});

@@ -1,4 +1,7 @@
+// src/modules/search.js - Updated version with metadata capture
+
 import { formatDuration } from '../utils/formatters.js';
+import { setPendingDownloadMetadata } from './download.js';
 
 let currentSearchSource = 'youtube';
 let searchTimeout = null;
@@ -128,7 +131,7 @@ function displaySearchResults(results, source) {
   }
   
   searchResults.innerHTML = results.map((result, index) => `
-    <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result)}'>
+    <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result).replace(/'/g, "&#39;")}'>
       <div class="flex items-center gap-3">
         ${result.thumbnail ? `
           <img src="${result.thumbnail}" alt="${result.title}" class="w-16 h-16 object-cover rounded">
@@ -145,7 +148,7 @@ function displaySearchResults(results, source) {
           ${result.duration ? `<p class="text-xs text-neutral-500">${formatDuration(result.duration)}</p>` : ''}
         </div>
         <div class="flex gap-2">
-          <button class="download-btn p-2 hover:bg-neutral-500 rounded-lg transition" id="download-btn-${index}" data-url="${result.url}">
+          <button class="download-btn p-2 hover:bg-neutral-500 rounded-lg transition" id="download-btn-${index}" data-index="${index}">
             <svg class="plus-icon w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
@@ -168,7 +171,7 @@ function displaySearchResults(results, source) {
     if (btn) {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        downloadFromSearch(result.url, btn);
+        downloadFromSearch(result, btn);
       });
     }
   });
@@ -177,7 +180,7 @@ function displaySearchResults(results, source) {
 /**
  * Download a song from search results
  */
-async function downloadFromSearch(url, buttonElement) {
+async function downloadFromSearch(searchResult, buttonElement) {
   const plusIcon = buttonElement.querySelector('.plus-icon');
   const loadingIcon = buttonElement.querySelector('.loading-icon');
   const checkmarkIcon = buttonElement.querySelector('.checkmark-icon');
@@ -187,8 +190,11 @@ async function downloadFromSearch(url, buttonElement) {
   plusIcon.classList.add('hidden');
   loadingIcon.classList.remove('hidden');
   
+  // Set pending metadata before download
+  setPendingDownloadMetadata(searchResult);
+  
   try {
-    await window.electronAPI.downloadSong(url);
+    await window.electronAPI.downloadSong(searchResult.url);
     
     // Show checkmark on success
     loadingIcon.classList.add('hidden');

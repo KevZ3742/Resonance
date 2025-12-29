@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCustomThemes: () => ipcRenderer.invoke('get-custom-themes'),
   setCustomThemes: (themes) => ipcRenderer.invoke('set-custom-themes', themes),
   exportTheme: (filename, svg) => ipcRenderer.invoke('export-theme', filename, svg),
+  getMetadata: () => ipcRenderer.invoke('get-metadata'),
+  setMetadata: (metadata) => ipcRenderer.invoke('set-metadata', metadata),
   onOpenPreferences: (callback) => {
     ipcRenderer.on('open-preferences', () => callback());
   },

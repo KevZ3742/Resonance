@@ -1,3 +1,7 @@
+// src/modules/playlists.js - Updated version with metadata support
+
+import { metadataManager, showMetadataEditor, formatDuration } from './metadata.js';
+
 let currentEditingPlaylist = null;
 let availableSongsCache = [];
 let draggedElement = null;
@@ -25,16 +29,39 @@ export async function loadAllSongs() {
       return;
     }
     
-    allSongsList.innerHTML = songs.map(song => `
-      <div class="bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg cursor-pointer transition flex justify-between items-center">
-        <div class="flex-1">
-          <div class="font-medium">${song}</div>
+    allSongsList.innerHTML = songs.map(song => {
+      const metadata = metadataManager.getMetadata(song);
+      return `
+        <div class="bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition">
+          <div class="flex items-center gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="font-medium truncate">${metadata.title}</div>
+              <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
+              ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
+            </div>
+            <div class="flex gap-2">
+              <button class="edit-metadata-btn text-neutral-400 hover:text-white text-sm px-3 py-1" data-song="${song}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+              <button class="play-song-btn text-blue-400 hover:text-blue-300 text-sm px-3 py-1" data-song="${song}">
+                Play
+              </button>
+            </div>
+          </div>
         </div>
-        <button class="text-blue-400 hover:text-blue-300 text-sm px-3 py-1">
-          Play
-        </button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+    
+    // Add edit metadata handlers
+    document.querySelectorAll('.edit-metadata-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const songName = btn.getAttribute('data-song');
+        showMetadataEditor(songName, loadAllSongs);
+      });
+    });
   } catch (error) {
     console.error('Failed to load songs:', error);
   }
@@ -245,9 +272,11 @@ async function loadAvailableSongs(playlistName) {
     // Preserve the search query and filter accordingly
     const currentQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
     if (currentQuery) {
-      const filteredSongs = availableSongs.filter(song => 
-        song.toLowerCase().includes(currentQuery)
-      );
+      const filteredSongs = availableSongs.filter(song => {
+        const metadata = metadataManager.getMetadata(song);
+        return metadata.title.toLowerCase().includes(currentQuery) ||
+               metadata.artist.toLowerCase().includes(currentQuery);
+      });
       renderAvailableSongs(filteredSongs);
     } else {
       renderAvailableSongs(availableSongs);
@@ -277,14 +306,20 @@ function renderAvailableSongs(songs) {
     return;
   }
   
-  availableSongsList.innerHTML = songs.map(song => `
-    <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
-      <span class="text-sm truncate flex-1">${song}</span>
-      <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1" data-song="${song}">
-        + Add
-      </button>
-    </div>
-  `).join('');
+  availableSongsList.innerHTML = songs.map(song => {
+    const metadata = metadataManager.getMetadata(song);
+    return `
+      <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
+        <div class="flex-1 min-w-0">
+          <div class="text-sm truncate font-medium">${metadata.title}</div>
+          <div class="text-xs text-neutral-500 truncate">${metadata.artist}</div>
+        </div>
+        <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1 ml-2" data-song="${song}">
+          + Add
+        </button>
+      </div>
+    `;
+  }).join('');
   
   // Add click handlers
   document.querySelectorAll('.add-song-btn').forEach(btn => {
@@ -314,9 +349,11 @@ function setupAvailableSongsSearch() {
       return;
     }
     
-    const filteredSongs = availableSongsCache.filter(song => 
-      song.toLowerCase().includes(query)
-    );
+    const filteredSongs = availableSongsCache.filter(song => {
+      const metadata = metadataManager.getMetadata(song);
+      return metadata.title.toLowerCase().includes(query) ||
+             metadata.artist.toLowerCase().includes(query);
+    });
     
     renderAvailableSongs(filteredSongs);
   });
@@ -354,26 +391,47 @@ async function loadPlaylistSongs(playlistName) {
       songs = orderedSongs;
     }
     
-    playlistSongsList.innerHTML = songs.map((song, index) => `
-      <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition flex items-center gap-3" data-song="${song}" data-index="${index}" draggable="true">
-        <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
-          </svg>
+    playlistSongsList.innerHTML = songs.map((song, index) => {
+      const metadata = metadataManager.getMetadata(song);
+      return `
+        <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition" data-song="${song}" data-index="${index}" draggable="true">
+          <div class="flex items-center gap-3">
+            <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium truncate">${metadata.title}</div>
+              <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
+              ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
+            </div>
+            <div class="flex gap-2">
+              <button class="edit-metadata-btn text-neutral-400 hover:text-white text-sm px-2 py-1" data-song="${song}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+              <button class="play-song-btn text-blue-400 hover:text-blue-300 text-sm px-3 py-1" data-song="${song}">
+                Play
+              </button>
+              <button class="remove-song-btn text-red-400 hover:text-red-300 text-sm px-3 py-1" data-song="${song}">
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="flex-1">
-          <div class="font-medium">${song.replace('.ref', '')}</div>
-        </div>
-        <div class="flex gap-2">
-          <button class="text-blue-400 hover:text-blue-300 text-sm px-3 py-1">
-            Play
-          </button>
-          <button class="remove-song-btn text-red-400 hover:text-red-300 text-sm px-3 py-1" data-song="${song}">
-            Remove
-          </button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+    
+    // Add edit metadata handlers
+    document.querySelectorAll('.edit-metadata-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const songName = btn.getAttribute('data-song');
+        showMetadataEditor(songName, () => loadPlaylistSongs(playlistName));
+      });
+    });
     
     // Add remove handlers
     document.querySelectorAll('.remove-song-btn').forEach(btn => {

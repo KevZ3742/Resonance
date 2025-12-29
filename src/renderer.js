@@ -1,4 +1,4 @@
-// src/renderer.js - Main renderer entry point
+// src/renderer.js - Updated main renderer entry point
 
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
@@ -7,11 +7,15 @@ import { initSearch } from './modules/search.js';
 import { initDownload } from './modules/download.js';
 import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists.js';
 import { initPreferences } from './modules/preferences.js';
+import { metadataManager } from './modules/metadata.js';
 
 /**
  * Initialize the application
  */
-function initApp() {
+async function initApp() {
+  // Initialize metadata manager first
+  await metadataManager.loadMetadata();
+  
   // Initialize main UI components
   initTabs();
   initPlayer();

@@ -1,6 +1,10 @@
+// src/modules/download.js - Updated version with metadata capture
+
 import { formatTimestamp } from '../utils/formatters.js';
+import { metadataManager } from './metadata.js';
 
 let downloads = [];
+let pendingDownloadMetadata = null;
 
 /**
  * Initialize download functionality
@@ -10,6 +14,14 @@ export function initDownload(onDownloadComplete) {
   initDownloadButton(onDownloadComplete);
   initOpenDirectoryButton();
   initDownloadEventListeners(onDownloadComplete);
+}
+
+/**
+ * Set metadata for the next download
+ * @param {Object} metadata - Metadata from search result
+ */
+export function setPendingDownloadMetadata(metadata) {
+  pendingDownloadMetadata = metadata;
 }
 
 /**
@@ -26,6 +38,9 @@ function initDownloadButton(onDownloadComplete) {
       showDownloadMessage('Please enter a URL', 'error');
       return;
     }
+
+    // Clear pending metadata for manual URL downloads
+    pendingDownloadMetadata = null;
 
     // Disable button and show progress
     downloadBtn.disabled = true;
@@ -88,11 +103,17 @@ function initDownloadEventListeners(onDownloadComplete) {
   });
 
   // Listen for download complete
-  window.electronAPI.onDownloadComplete((data) => {
+  window.electronAPI.onDownloadComplete(async (data) => {
     showDownloadMessage(`✓ Download complete: ${data.filename}`, 'success');
     downloadBtn.disabled = false;
     downloadBtn.textContent = 'Download';
     downloadUrlInput.value = '';
+    
+    // Save metadata if available
+    if (pendingDownloadMetadata) {
+      await metadataManager.importFromSearch(data.filename, pendingDownloadMetadata);
+      pendingDownloadMetadata = null;
+    }
     
     // Add to download history
     addToDownloadHistory(data.filename, data.path);
@@ -124,6 +145,9 @@ function initDownloadEventListeners(onDownloadComplete) {
     downloadBtn.disabled = false;
     downloadBtn.textContent = 'Download';
     downloadProgressContainer.classList.add('hidden');
+    
+    // Clear pending metadata on error
+    pendingDownloadMetadata = null;
   });
 }
 
