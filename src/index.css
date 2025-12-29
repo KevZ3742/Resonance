@@ -161,36 +161,62 @@ body {
 .volume-vertical {
   writing-mode: vertical-lr;
   direction: rtl;
-  width: 1.5rem;
-  height: 6rem;
-}
-
-input[type="range"]::-webkit-slider-thumb {
+  width: 6px;
+  height: 120px;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--accent-color);
-  cursor: pointer;
-  border-radius: 50%;
+  background: transparent;
+  margin: 0;
+  padding: 0;
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+/* Webkit browsers (Chrome, Safari, Edge) */
+.volume-vertical::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
   background: var(--accent-color);
-  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-left: -5px; /* Center the thumb on the track */
+}
+
+.volume-vertical::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.volume-vertical::-webkit-slider-runnable-track {
+  width: 6px;
+  background: linear-gradient(to top, var(--accent-color) 0%, var(--accent-color) var(--volume-fill, 70%), var(--b_med) var(--volume-fill, 70%), var(--b_med) 100%);
+  border-radius: 3px;
+}
+
+/* Firefox */
+.volume-vertical::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
   border-radius: 50%;
   border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="range"]::-webkit-slider-runnable-track {
-  background: var(--bg-tertiary);
-  border-radius: 9999px;
+.volume-vertical::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-input[type="range"]::-moz-range-track {
-  background: var(--bg-tertiary);
-  border-radius: 9999px;
+.volume-vertical::-moz-range-track {
+  width: 6px;
+  background: var(--b_med);
+  border-radius: 3px;
+}
+
+.volume-vertical::-moz-range-progress {
+  background: var(--accent-color);
+  border-radius: 3px;
 }
 
 /* Drag and drop visual feedback */
