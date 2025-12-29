@@ -1,6 +1,7 @@
 let isPlaying = false;
 let currentSong = null;
 let audioElement = null;
+let previousVolume = 0.7; // Store volume before mute
 
 /**
  * Initialize music player controls
@@ -52,6 +53,7 @@ function createAudioElement() {
   
   // Set default volume
   audioElement.volume = 0.7;
+  previousVolume = 0.7;
 }
 
 /**
@@ -134,12 +136,32 @@ function initVolumeControl() {
     }
   };
 
+  // Volume slider input handler
   volumeSlider.addEventListener('input', (e) => {
     const value = e.target.value;
     if (audioElement) {
       audioElement.volume = value / 100;
+      if (value > 0) {
+        previousVolume = value / 100;
+      }
     }
     updateVolumeDisplay(value);
+  });
+
+  // Volume button click handler - toggle mute
+  volumeBtn.addEventListener('click', () => {
+    if (audioElement.volume === 0) {
+      // Unmute - restore previous volume
+      audioElement.volume = previousVolume;
+      volumeSlider.value = previousVolume * 100;
+      updateVolumeDisplay(previousVolume * 100);
+    } else {
+      // Mute - save current volume and set to 0
+      previousVolume = audioElement.volume;
+      audioElement.volume = 0;
+      volumeSlider.value = 0;
+      updateVolumeDisplay(0);
+    }
   });
 
   // Initialize display
