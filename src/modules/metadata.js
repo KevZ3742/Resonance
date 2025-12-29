@@ -1,5 +1,3 @@
-// src/modules/metadata.js
-
 /**
  * Metadata manager for songs
  */
@@ -82,6 +80,32 @@ class MetadataManager {
       thumbnail: searchResult.thumbnail
     });
   }
+
+  /**
+   * Get duration from MP3 file
+   * @param {string} filename - Song filename
+   * @returns {Promise<number|null>} Duration in seconds
+   */
+  async getDurationFromFile(filename) {
+    try {
+      const duration = await window.electronAPI.getMp3Duration(filename);
+      return duration;
+    } catch (error) {
+      console.error('Failed to get MP3 duration:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update duration for a song from its MP3 file
+   * @param {string} filename - Song filename
+   */
+  async updateDurationFromFile(filename) {
+    const duration = await this.getDurationFromFile(filename);
+    if (duration !== null) {
+      await this.setMetadata(filename, { duration });
+    }
+  }
 }
 
 // Create singleton instance
@@ -128,25 +152,11 @@ export function showMetadataEditor(filename, onSave) {
         </div>
         
         <div>
-          <label class="block text-sm font-semibold mb-2">Duration (seconds)</label>
-          <input 
-            type="number" 
-            id="metadata-duration"
-            value="${metadata.duration || ''}"
-            placeholder="Leave empty if unknown"
-            class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition"
-          >
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold mb-2">Thumbnail URL (optional)</label>
-          <input 
-            type="text" 
-            id="metadata-thumbnail"
-            value="${metadata.thumbnail || ''}"
-            placeholder="https://..."
-            class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition"
-          >
+          <label class="block text-sm font-semibold mb-2">Duration</label>
+          <div class="bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 text-neutral-400">
+            ${metadata.duration ? formatDuration(metadata.duration) : 'Calculating...'} (auto-detected)
+          </div>
+          <p class="text-xs text-neutral-500 mt-1">Duration is automatically detected from the MP3 file</p>
         </div>
       </div>
       
@@ -184,17 +194,16 @@ export function showMetadataEditor(filename, onSave) {
   saveBtn.addEventListener('click', async () => {
     const title = document.getElementById('metadata-title').value.trim();
     const artist = document.getElementById('metadata-artist').value.trim();
-    const durationStr = document.getElementById('metadata-duration').value.trim();
-    const thumbnail = document.getElementById('metadata-thumbnail').value.trim();
-    
-    const duration = durationStr ? parseInt(durationStr) : null;
     
     await metadataManager.setMetadata(filename, {
       title: title || metadata.title,
-      artist: artist || metadata.artist,
-      duration,
-      thumbnail: thumbnail || null
+      artist: artist || metadata.artist
     });
+    
+    // Update duration from file if not set
+    if (!metadata.duration) {
+      await metadataManager.updateDurationFromFile(filename);
+    }
     
     modal.remove();
     
@@ -211,6 +220,18 @@ export function showMetadataEditor(filename, onSave) {
       }
     });
   });
+  
+  // Update duration in the background
+  if (!metadata.duration) {
+    metadataManager.getDurationFromFile(filename).then(duration => {
+      if (duration !== null && modal.parentElement) {
+        const durationDisplay = modal.querySelector('.bg-neutral-700.border.border-neutral-600');
+        if (durationDisplay) {
+          durationDisplay.textContent = `${formatDuration(duration)} (auto-detected)`;
+        }
+      }
+    });
+  }
 }
 
 /**
@@ -219,8 +240,8 @@ export function showMetadataEditor(filename, onSave) {
  * @returns {string} Formatted duration
  */
 export function formatDuration(seconds) {
-  if (!seconds) return '';
+  if (!seconds && seconds !== 0) return '';
   const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }

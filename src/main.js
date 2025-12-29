@@ -676,3 +676,67 @@ ipcMain.handle('set-metadata', async (event, metadata) => {
     throw error;
   }
 });
+
+// Handle getting MP3 duration
+ipcMain.handle('get-mp3-duration', async (event, filename) => {
+  try {
+    const allSongsPath = getAllSongsPath();
+    const filePath = path.join(allSongsPath, filename);
+    
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File does not exist');
+    }
+    
+    // Use ffprobe (part of ffmpeg-static) to get duration
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execPromise = promisify(exec);
+    
+    // Get the directory containing ffmpeg
+    const ffmpegDir = path.dirname(ffmpegStatic);
+    const ffprobePath = process.platform === 'win32' 
+      ? path.join(ffmpegDir, 'ffprobe.exe')
+      : path.join(ffmpegDir, 'ffprobe');
+    
+    // If ffprobe doesn't exist in the same directory, try using ffmpeg to get info
+    const command = `"${ffmpegStatic}" -i "${filePath}" 2>&1`;
+    
+    try {
+      const { stdout, stderr } = await execPromise(command);
+      const output = stdout + stderr;
+      
+      // Parse duration from ffmpeg output
+      // Format: Duration: HH:MM:SS.ms
+      const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+      
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1]);
+        const minutes = parseInt(durationMatch[2]);
+        const seconds = parseFloat(durationMatch[3]);
+        
+        const totalSeconds = Math.floor(hours * 3600 + minutes * 60 + seconds);
+        return totalSeconds;
+      }
+      
+      return null;
+    } catch (error) {
+      // FFmpeg exits with error code when reading file info, but stderr contains the info we need
+      const output = error.stdout + error.stderr;
+      const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+      
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1]);
+        const minutes = parseInt(durationMatch[2]);
+        const seconds = parseFloat(durationMatch[3]);
+        
+        const totalSeconds = Math.floor(hours * 3600 + minutes * 60 + seconds);
+        return totalSeconds;
+      }
+      
+      throw new Error('Could not parse duration');
+    }
+  } catch (error) {
+    console.error('Failed to get MP3 duration:', error);
+    return null;
+  }
+});

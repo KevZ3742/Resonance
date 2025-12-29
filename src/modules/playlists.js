@@ -1,5 +1,3 @@
-// src/modules/playlists.js - Updated version with metadata support
-
 import { metadataManager, showMetadataEditor, formatDuration } from './metadata.js';
 
 let currentEditingPlaylist = null;
@@ -312,9 +310,11 @@ function renderAvailableSongs(songs) {
       <div class="flex justify-between items-center p-2 hover:bg-neutral-700 rounded">
         <div class="flex-1 min-w-0">
           <div class="text-sm truncate font-medium">${metadata.title}</div>
-          <div class="text-xs text-neutral-500 truncate">${metadata.artist}</div>
+          <div class="text-xs text-neutral-400 truncate">
+            ${metadata.artist}${metadata.duration ? ` · ${formatDuration(metadata.duration)}` : ''}
+          </div>
         </div>
-        <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1 ml-2" data-song="${song}">
+        <button class="add-song-btn text-blue-400 hover:text-blue-300 text-xs px-2 py-1 ml-2 shrink-0" data-song="${song}">
           + Add
         </button>
       </div>

@@ -1,5 +1,3 @@
-// src/modules/download.js - Updated version with metadata capture
-
 import { formatTimestamp } from '../utils/formatters.js';
 import { metadataManager } from './metadata.js';
 
@@ -109,11 +107,14 @@ function initDownloadEventListeners(onDownloadComplete) {
     downloadBtn.textContent = 'Download';
     downloadUrlInput.value = '';
     
-    // Save metadata if available
+    // Save metadata if available from search
     if (pendingDownloadMetadata) {
       await metadataManager.importFromSearch(data.filename, pendingDownloadMetadata);
       pendingDownloadMetadata = null;
     }
+    
+    // Always update duration from the actual MP3 file
+    await metadataManager.updateDurationFromFile(data.filename);
     
     // Add to download history
     addToDownloadHistory(data.filename, data.path);

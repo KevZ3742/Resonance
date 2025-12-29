@@ -1,10 +1,5 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   downloadSong: (url) => ipcRenderer.invoke('download-song', url),
   searchSongs: (query, source) => ipcRenderer.invoke('search-songs', query, source),
@@ -26,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportTheme: (filename, svg) => ipcRenderer.invoke('export-theme', filename, svg),
   getMetadata: () => ipcRenderer.invoke('get-metadata'),
   setMetadata: (metadata) => ipcRenderer.invoke('set-metadata', metadata),
+  getMp3Duration: (filename) => ipcRenderer.invoke('get-mp3-duration', filename),
   onOpenPreferences: (callback) => {
     ipcRenderer.on('open-preferences', () => callback());
   },
