@@ -241,10 +241,20 @@ body.dragging-theme::before {
 }
 
 #progress-bar.dragging #progress-thumb {
-  opacity: 1;
-  transform: translateY(-50%) translateX(-0.375rem) scale(1.2);
+  transform: translateY(-50%) translateX(-50%) scale(1.2);
 }
 
 #progress-bar.dragging #progress {
   transition: none;
+}
+
+/* Always show the progress thumb */
+#progress-thumb {
+  opacity: 1 !important;
+  transform: translateY(-50%) translateX(-50%);
+}
+
+/* Show larger thumb on hover */
+#progress-bar:hover #progress-thumb {
+  transform: translateY(-50%) translateX(-50%) scale(1.1);
 }

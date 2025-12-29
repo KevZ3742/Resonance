@@ -1,433 +1,461 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; media-src 'self' blob:">
-    <title>Resonance</title>
-    <script type="module" src="/src/lib/theme.js"></script>
-  </head>
-  <body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
-    <div id="app" class="h-full flex flex-col p-4 gap-4">
-      <!-- Main Content Area -->
-      <div class="flex-1 flex gap-4 overflow-hidden">
-        <!-- Left Panel - Title, Author & Lyrics -->
-        <div class="w-1/2 bg-neutral-800 rounded-2xl p-6 flex flex-col overflow-hidden">
-          <!-- Title and Author Section -->
-          <div class="mb-4 pb-4 border-b border-neutral-700">
-            <h1 class="text-2xl font-bold mb-1" id="song-title">No Song Playing</h1>
-            <p class="text-neutral-400" id="song-artist">Unknown Artist</p>
-          </div>
 
-          <!-- Lyrics Section -->
-          <div class="flex-1 overflow-y-auto">
-            <div class="text-neutral-300 leading-relaxed whitespace-pre-line" id="lyrics">
-              Select a song to view lyrics
-            </div>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; media-src 'self' blob:">
+  <title>Resonance</title>
+  <script type="module" src="/src/lib/theme.js"></script>
+</head>
+
+<body class="m-0 p-0 h-screen overflow-hidden bg-neutral-950 text-white">
+  <div id="app" class="h-full flex flex-col p-4 gap-4">
+    <!-- Main Content Area -->
+    <div class="flex-1 flex gap-4 overflow-hidden">
+      <!-- Left Panel - Title, Author & Lyrics -->
+      <div class="w-1/2 bg-neutral-800 rounded-2xl p-6 flex flex-col overflow-hidden">
+        <!-- Title and Author Section -->
+        <div class="mb-4 pb-4 border-b border-neutral-700">
+          <h1 class="text-2xl font-bold mb-1" id="song-title">No Song Playing</h1>
+          <p class="text-neutral-400" id="song-artist">Unknown Artist</p>
         </div>
 
-        <!-- Right Panel - Tabs -->
-        <div class="w-1/2 bg-neutral-800 rounded-2xl flex flex-col overflow-hidden">
-          <!-- Tab Headers -->
-          <div class="flex border-b border-neutral-700">
-            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn active" data-tab="queue">
-              Queue
-            </button>
-            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="library">
-              Library
-            </button>
-            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="search">
-              Search
-            </button>
-            <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="download">
-              Download
-            </button>
-          </div>
-
-          <!-- Tab Content -->
-          <div class="flex-1 overflow-hidden">
-            <!-- Queue Tab -->
-            <div class="tab-content h-full overflow-y-auto p-6" id="queue-tab">
-              <h2 class="text-xl font-bold mb-4">Up Next</h2>
-              <div id="queue-list" class="space-y-2">
-                <p class="text-neutral-400">Queue is empty</p>
-              </div>
-            </div>
-
-            <!-- Library Tab -->
-            <div class="tab-content h-full overflow-y-auto p-6 hidden" id="library-tab">
-              <!-- Library Sub-tabs -->
-              <div class="flex gap-2 mb-4">
-                <button class="library-tab-btn active px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition" data-library-tab="all-songs">
-                  All Songs
-                </button>
-                <button class="library-tab-btn px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition" data-library-tab="playlists">
-                  Playlists
-                </button>
-              </div>
-
-              <!-- All Songs View -->
-              <div class="library-tab-content" id="all-songs-view">
-                <h2 class="text-xl font-bold mb-4">All Songs</h2>
-                <div id="all-songs-list" class="space-y-2">
-                  <p class="text-neutral-400">No songs in library</p>
-                </div>
-              </div>
-
-              <!-- Playlists View -->
-              <div class="library-tab-content hidden" id="playlists-view">
-                <div class="flex justify-between items-center mb-4">
-                  <h2 class="text-xl font-bold">Playlists</h2>
-                  <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition" id="create-playlist-btn">
-                    + New Playlist
-                  </button>
-                </div>
-                <div id="playlists-list" class="space-y-2">
-                  <p class="text-neutral-400">No playlists yet</p>
-                </div>
-              </div>
-
-              <!-- Playlist Edit View -->
-              <div class="library-tab-content hidden" id="playlist-edit-view">
-                <div class="flex items-center gap-2 mb-4">
-                  <button class="text-neutral-400 hover:text-white transition" id="back-to-playlists-btn">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                    </svg>
-                  </button>
-                  <h2 class="text-xl font-bold" id="playlist-edit-title">Playlist Name</h2>
-                </div>
-                
-                <!-- Add songs section -->
-                <div class="mb-4 pb-4 border-b border-neutral-700">
-                  <h3 class="text-sm font-semibold text-neutral-400 mb-2">Add Songs</h3>
-                  <input 
-                    type="text" 
-                    placeholder="Search available songs..." 
-                    class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
-                    id="available-songs-search"
-                  >
-                  <div id="available-songs-list" class="space-y-1 max-h-48 overflow-y-auto">
-                    <p class="text-neutral-500 text-sm">No songs available</p>
-                  </div>
-                </div>
-
-                <!-- Current playlist songs -->
-                <div>
-                  <h3 class="text-sm font-semibold text-neutral-400 mb-2">Songs in Playlist</h3>
-                  <div id="playlist-songs-list" class="space-y-2">
-                    <p class="text-neutral-400">No songs in this playlist</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Search Tab -->
-            <div class="tab-content h-full p-6 hidden" id="search-tab">
-              <div class="flex flex-col h-full">
-                <!-- Search Source Buttons -->
-                <div class="flex gap-2 mb-4">
-                  <button class="search-source-btn active flex-1 py-2 px-4 rounded-lg bg-blue-500 hover:bg-blue-600 transition" data-source="youtube">
-                    YouTube
-                  </button>
-                  <button class="search-source-btn flex-1 py-2 px-4 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition" data-source="soundcloud">
-                    SoundCloud
-                  </button>
-                  <button class="search-source-btn flex-1 py-2 px-4 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition" data-source="temp">
-                    Temp
-                  </button>
-                </div>
-
-                <!-- Search Input -->
-                <input 
-                  type="text" 
-                  placeholder="Search for songs..." 
-                  class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition"
-                  id="search-input"
-                >
-
-                <!-- Search Results -->
-                <div class="flex-1 overflow-y-auto">
-                  <div id="search-results" class="space-y-2">
-                    <p class="text-neutral-400">Search for songs</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Download Tab -->
-            <div class="tab-content h-full overflow-y-auto p-6 hidden" id="download-tab">
-              <h2 class="text-xl font-bold mb-4">Download Song</h2>
-              <div class="space-y-4">
-                <div>
-                  <input 
-                    type="text" 
-                    placeholder="Paste YouTube/SoundCloud URL here..." 
-                    class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition"
-                    id="download-url-input"
-                  >
-                  <p class="text-xs text-neutral-500 mt-2">
-                    ℹ️ Supports YouTube, SoundCloud, Bandcamp, and more. DRM services (Spotify, Apple Music, Amazon Music) are not supported.
-                  </p>
-                </div>
-                <button 
-                  class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  id="download-btn"
-                >
-                  Download
-                </button>
-                <div id="download-status" class="text-sm text-neutral-400 hidden">
-                  <div class="bg-neutral-700 rounded-lg p-4">
-                    <p id="download-message">Ready to download</p>
-                    <div class="mt-2 bg-neutral-600 rounded-full h-2 overflow-hidden hidden" id="download-progress-container">
-                      <div class="bg-blue-500 h-2 transition-all" id="download-progress" style="width: 0%"></div>
-                    </div>
-                  </div>
-                </div>
-                <div id="download-history" class="mt-6">
-                  <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-lg font-semibold">Recent Downloads</h3>
-                    <button 
-                      class="bg-neutral-700 hover:bg-neutral-600 text-white text-sm py-2 px-4 rounded-lg transition"
-                      id="open-song-directory-btn"
-                    >
-                      Open Song Directory
-                    </button>
-                  </div>
-                  <div id="download-list" class="space-y-2">
-                    <p class="text-neutral-400">No downloads yet</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <!-- Lyrics Section -->
+        <div class="flex-1 overflow-y-auto">
+          <div class="text-neutral-300 leading-relaxed whitespace-pre-line" id="lyrics">
+            Select a song to view lyrics
           </div>
         </div>
       </div>
 
-      <!-- MP3 Controls Section - Full Width at Bottom -->
-      <div class="bg-neutral-800 rounded-2xl overflow-visible">
-        <!-- Control Buttons -->
-        <div class="flex items-center justify-between p-6 pb-4 overflow-visible">
-          <div class="w-1/3"></div>
-          
-          <div class="flex items-center justify-center gap-6 w-1/3">
-            <!-- Previous Button -->
-            <button class="text-neutral-400 hover:text-white transition" id="prev-btn">
-              <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z"/>
-              </svg>
-            </button>
+      <!-- Right Panel - Tabs -->
+      <div class="w-1/2 bg-neutral-800 rounded-2xl flex flex-col overflow-hidden">
+        <!-- Tab Headers -->
+        <div class="flex border-b border-neutral-700">
+          <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn active"
+            data-tab="queue">
+            Queue
+          </button>
+          <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="library">
+            Library
+          </button>
+          <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="search">
+            Search
+          </button>
+          <button class="flex-1 py-4 px-6 text-center hover:bg-neutral-700/50 transition tab-btn" data-tab="download">
+            Download
+          </button>
+        </div>
 
-            <!-- Play/Pause Button -->
-            <button class="bg-blue-500 hover:bg-blue-600 rounded-full p-3 transition" id="play-pause-btn">
-              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" id="play-icon">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <svg class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24" id="pause-icon">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-              </svg>
-            </button>
-
-            <!-- Next Button -->
-            <button class="text-neutral-400 hover:text-white transition" id="next-btn">
-              <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-              </svg>
-            </button>
+        <!-- Tab Content -->
+        <div class="flex-1 overflow-hidden">
+          <!-- Queue Tab -->
+          <div class="tab-content h-full overflow-y-auto p-6" id="queue-tab">
+            <h2 class="text-xl font-bold mb-4">Up Next</h2>
+            <div id="queue-list" class="space-y-2">
+              <p class="text-neutral-400">Queue is empty</p>
+            </div>
           </div>
 
-          <!-- Volume Control with Hover -->
-          <div class="w-1/3 flex justify-end">
-            <div class="relative volume-container">
-              <button class="text-neutral-400 hover:text-white transition-colors duration-200 p-2 rounded-2xl hover:bg-neutral-700/50" id="volume-btn">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" id="volume-icon">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                </svg>
+          <!-- Library Tab -->
+          <div class="tab-content h-full overflow-y-auto p-6 hidden" id="library-tab">
+            <!-- Library Sub-tabs -->
+            <div class="flex gap-2 mb-4">
+              <button class="library-tab-btn active px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition"
+                data-library-tab="all-songs">
+                All Songs
               </button>
-              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 hidden volume-slider-container z-50 transition-opacity duration-200">
-                <div class="bg-neutral-800 rounded-2xl p-4 shadow-2xl border border-neutral-700 backdrop-blur-sm">
-                  <div class="flex flex-col items-center gap-3">
-                    <span class="text-xs text-neutral-400 font-semibold tracking-wider w-10 text-center tabular-nums" id="volume-percentage">70%</span>
-                    <div class="flex items-center justify-center px-2">
-                      <input type="range" min="0" max="100" value="70" class="volume-vertical cursor-pointer" id="volume-slider" orient="vertical">
-                    </div>
-                  </div>
+              <button class="library-tab-btn px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition"
+                data-library-tab="playlists">
+                Playlists
+              </button>
+            </div>
+
+            <!-- All Songs View -->
+            <div class="library-tab-content" id="all-songs-view">
+              <h2 class="text-xl font-bold mb-4">All Songs</h2>
+              <div id="all-songs-list" class="space-y-2">
+                <p class="text-neutral-400">No songs in library</p>
+              </div>
+            </div>
+
+            <!-- Playlists View -->
+            <div class="library-tab-content hidden" id="playlists-view">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Playlists</h2>
+                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                  id="create-playlist-btn">
+                  + New Playlist
+                </button>
+              </div>
+              <div id="playlists-list" class="space-y-2">
+                <p class="text-neutral-400">No playlists yet</p>
+              </div>
+            </div>
+
+            <!-- Playlist Edit View -->
+            <div class="library-tab-content hidden" id="playlist-edit-view">
+              <div class="flex items-center gap-2 mb-4">
+                <button class="text-neutral-400 hover:text-white transition" id="back-to-playlists-btn">
+                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                  </svg>
+                </button>
+                <h2 class="text-xl font-bold" id="playlist-edit-title">Playlist Name</h2>
+              </div>
+
+              <!-- Add songs section -->
+              <div class="mb-4 pb-4 border-b border-neutral-700">
+                <h3 class="text-sm font-semibold text-neutral-400 mb-2">Add Songs</h3>
+                <input type="text" placeholder="Search available songs..."
+                  class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
+                  id="available-songs-search">
+                <div id="available-songs-list" class="space-y-1 max-h-48 overflow-y-auto">
+                  <p class="text-neutral-500 text-sm">No songs available</p>
+                </div>
+              </div>
+
+              <!-- Current playlist songs -->
+              <div>
+                <h3 class="text-sm font-semibold text-neutral-400 mb-2">Songs in Playlist</h3>
+                <div id="playlist-songs-list" class="space-y-2">
+                  <p class="text-neutral-400">No songs in this playlist</p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Progress Bar - Full Width at Bottom -->
-        <div class="px-6 pb-4">
-          <div class="flex justify-between text-xs text-neutral-400 mb-2">
-            <span id="current-time">0:00</span>
-            <span id="total-time">0:00</span>
-          </div>
-          
-          <!-- Progress Bar Container -->
-          <div class="relative group">
-            <div 
-              class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer transition-all duration-200 group-hover:h-2" 
-              id="progress-bar"
-            >
-              <!-- Progress Fill with Thumb -->
-              <div 
-                class="relative bg-blue-500 h-full rounded-full transition-none pointer-events-none" 
-                id="progress" 
-                style="width: 0%"
-              >
-                <!-- Thumb/Dot -->
-                <div 
-                  class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg opacity-0 transition-all duration-200 -translate-x-1.5 group-hover:opacity-100 group-hover:scale-110"
-                  id="progress-thumb"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Custom Modal for Playlist Name -->
-    <div id="playlist-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-      <div class="flex items-center justify-center h-full">
-        <div class="bg-neutral-800 rounded-lg p-6 w-96">
-          <h3 class="text-xl font-bold mb-4">Create New Playlist</h3>
-          <input 
-            type="text" 
-            id="playlist-name-input" 
-            placeholder="Enter playlist name..." 
-            class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition"
-          >
-          <div class="flex gap-2 justify-end">
-            <button id="playlist-modal-cancel" class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg transition">
-              Cancel
-            </button>
-            <button id="playlist-modal-create" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
-              Create
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Preferences Modal -->
-    <div id="preferences-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-      <div class="flex items-center justify-center h-full">
-        <div class="bg-neutral-800 rounded-2xl w-150 max-h-[80vh] flex flex-col">
-          <h3 class="text-xl font-bold mb-4 px-6 pt-6">Preferences</h3>
-          
-          <!-- Scrollable Content -->
-          <div class="overflow-y-auto flex-1 px-6">
-            <!-- Theme Management Section -->
-            <div class="mb-6">
-              <label class="block text-sm font-semibold mb-2">Theme</label>
-              
-              <!-- Current Theme Display -->
-              <div class="mb-3 flex items-center justify-between">
-                <span class="text-sm text-neutral-400">Current: <span id="current-theme-name" class="text-white font-medium">-</span></span>
-                <span class="text-xs text-neutral-500">Drop SVG files anywhere to load themes</span>
-              </div>
-              
-              <!-- Theme Selector -->
-              <select id="theme-select" class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:border-blue-500 transition">
-                <option value="">Loading themes...</option>
-              </select>
-
-              <!-- Theme Actions -->
+          <!-- Search Tab -->
+          <div class="tab-content h-full p-6 hidden" id="search-tab">
+            <div class="flex flex-col h-full">
+              <!-- Search Source Buttons -->
               <div class="flex gap-2 mb-4">
-                <button id="create-theme-btn" class="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition text-sm">
-                  + New Theme
+                <button
+                  class="search-source-btn active flex-1 py-2 px-4 rounded-lg bg-blue-500 hover:bg-blue-600 transition"
+                  data-source="youtube">
+                  YouTube
                 </button>
-                <button id="export-theme-btn" class="flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition text-sm">
-                  Export
+                <button
+                  class="search-source-btn flex-1 py-2 px-4 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition"
+                  data-source="soundcloud">
+                  SoundCloud
                 </button>
-                <button id="delete-theme-btn" class="flex-1 bg-red-700 hover:bg-red-600 px-4 py-2 rounded-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  Delete
+                <button
+                  class="search-source-btn flex-1 py-2 px-4 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition"
+                  data-source="temp">
+                  Temp
                 </button>
               </div>
 
-              <!-- Theme Preview/Editor -->
-              <div class="bg-neutral-900 rounded-lg p-4">
-                <p class="text-xs text-neutral-500 mb-3">Click on any color to edit (creates custom theme from defaults)</p>
-                
-                <!-- Background -->
-                <div class="mb-4">
-                  <label class="block text-xs text-neutral-400 mb-1">Background</label>
-                  <div class="flex gap-2 items-center">
-                    <div id="color-background" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                    <input type="color" id="input-background" class="hidden">
+              <!-- Search Input -->
+              <input type="text" placeholder="Search for songs..."
+                class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition"
+                id="search-input">
+
+              <!-- Search Results -->
+              <div class="flex-1 overflow-y-auto">
+                <div id="search-results" class="space-y-2">
+                  <p class="text-neutral-400">Search for songs</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Download Tab -->
+          <div class="tab-content h-full overflow-y-auto p-6 hidden" id="download-tab">
+            <h2 class="text-xl font-bold mb-4">Download Song</h2>
+            <div class="space-y-4">
+              <div>
+                <input type="text" placeholder="Paste YouTube/SoundCloud URL here..."
+                  class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition"
+                  id="download-url-input">
+                <p class="text-xs text-neutral-500 mt-2">
+                  ℹ️ Supports YouTube, SoundCloud, Bandcamp, and more. DRM services (Spotify, Apple Music, Amazon Music)
+                  are not supported.
+                </p>
+              </div>
+              <button
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                id="download-btn">
+                Download
+              </button>
+              <div id="download-status" class="text-sm text-neutral-400 hidden">
+                <div class="bg-neutral-700 rounded-lg p-4">
+                  <p id="download-message">Ready to download</p>
+                  <div class="mt-2 bg-neutral-600 rounded-full h-2 overflow-hidden hidden"
+                    id="download-progress-container">
+                    <div class="bg-blue-500 h-2 transition-all" id="download-progress" style="width: 0%"></div>
                   </div>
                 </div>
-
-                <!-- Foreground Colors -->
-                <div class="mb-4">
-                  <label class="block text-xs text-neutral-400 mb-2">Foreground</label>
-                  <div class="grid grid-cols-4 gap-2">
-                    <div>
-                      <div id="color-f_high" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-f_high" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
-                    </div>
-                    <div>
-                      <div id="color-f_med" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-f_med" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
-                    </div>
-                    <div>
-                      <div id="color-f_low" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-f_low" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
-                    </div>
-                    <div>
-                      <div id="color-f_inv" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-f_inv" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
-                    </div>
-                  </div>
+              </div>
+              <div id="download-history" class="mt-6">
+                <div class="flex justify-between items-center mb-2">
+                  <h3 class="text-lg font-semibold">Recent Downloads</h3>
+                  <button class="bg-neutral-700 hover:bg-neutral-600 text-white text-sm py-2 px-4 rounded-lg transition"
+                    id="open-song-directory-btn">
+                    Open Song Directory
+                  </button>
                 </div>
+                <div id="download-list" class="space-y-2">
+                  <p class="text-neutral-400">No downloads yet</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                <!-- Background Colors -->
-                <div>
-                  <label class="block text-xs text-neutral-400 mb-2">Background Shades</label>
-                  <div class="grid grid-cols-4 gap-2">
-                    <div>
-                      <div id="color-b_high" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-b_high" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
-                    </div>
-                    <div>
-                      <div id="color-b_med" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-b_med" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
-                    </div>
-                    <div>
-                      <div id="color-b_low" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-b_low" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
-                    </div>
-                    <div>
-                      <div id="color-b_inv" class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition"></div>
-                      <input type="color" id="input-b_inv" class="hidden">
-                      <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
-                    </div>
+    <!-- MP3 Controls Section - Full Width at Bottom -->
+    <div class="bg-neutral-800 rounded-2xl overflow-visible">
+      <!-- Control Buttons -->
+      <div class="flex items-center justify-between p-6 pb-4 overflow-visible">
+        <div class="w-1/3"></div>
+
+        <div class="flex items-center justify-center gap-6 w-1/3">
+          <!-- Previous Button -->
+          <button class="text-neutral-400 hover:text-white transition" id="prev-btn">
+            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
+            </svg>
+          </button>
+
+          <!-- Play/Pause Button -->
+          <button class="bg-blue-500 hover:bg-blue-600 rounded-full p-3 transition" id="play-pause-btn">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" id="play-icon">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24" id="pause-icon">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+
+          <!-- Next Button -->
+          <button class="text-neutral-400 hover:text-white transition" id="next-btn">
+            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Volume Control with Hover -->
+        <div class="w-1/3 flex justify-end">
+          <div class="relative volume-container">
+            <button
+              class="text-neutral-400 hover:text-white transition-colors duration-200 p-2 rounded-2xl hover:bg-neutral-700/50"
+              id="volume-btn">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" id="volume-icon">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+              </svg>
+            </button>
+            <div
+              class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 hidden volume-slider-container z-50 transition-opacity duration-200">
+              <div class="bg-neutral-800 rounded-2xl p-4 shadow-2xl border border-neutral-700 backdrop-blur-sm">
+                <div class="flex flex-col items-center gap-3">
+                  <span class="text-xs text-neutral-400 font-semibold tracking-wider w-10 text-center tabular-nums"
+                    id="volume-percentage">70%</span>
+                  <div class="flex items-center justify-center px-2">
+                    <input type="range" min="0" max="100" value="70" class="volume-vertical cursor-pointer"
+                      id="volume-slider" orient="vertical">
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <!-- End Scrollable Content -->
+        </div>
+      </div>
 
-          <div class="flex gap-2 justify-end px-6 pb-6 pt-4">
-            <button id="preferences-close" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
-              Done
-            </button>
+      <!-- Progress Bar - Full Width at Bottom -->
+      <div class="px-6 pb-4">
+        <div class="flex justify-between text-xs text-neutral-400 mb-2">
+          <span id="current-time">0:00</span>
+          <span id="total-time">0:00</span>
+        </div>
+
+        <!-- Progress Bar Container -->
+        <div class="relative group">
+          <div
+            class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer transition-all duration-200 group-hover:h-2"
+            id="progress-bar">
+            <!-- Progress Fill with Thumb -->
+            <div class="relative bg-blue-500 h-full rounded-full transition-none pointer-events-none" id="progress"
+              style="width: 0%">
+              <!-- Thumb/Dot -->
+              <div
+                class="absolute right-0 w-3 h-3 bg-blue-500 rounded-full shadow-lg opacity-0 transition-all duration-200 -translate-x group-hover:opacity-100 group-hover:scale-110"
+                id="progress-thumb">
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    
-    <script type="module" src="/src/renderer.js"></script>
-  </body>
+  </div>
+
+  <!-- Custom Modal for Playlist Name -->
+  <div id="playlist-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+    <div class="flex items-center justify-center h-full">
+      <div class="bg-neutral-800 rounded-lg p-6 w-96">
+        <h3 class="text-xl font-bold mb-4">Create New Playlist</h3>
+        <input type="text" id="playlist-name-input" placeholder="Enter playlist name..."
+          class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-blue-500 transition">
+        <div class="flex gap-2 justify-end">
+          <button id="playlist-modal-cancel"
+            class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg transition">
+            Cancel
+          </button>
+          <button id="playlist-modal-create"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preferences Modal -->
+  <div id="preferences-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+    <div class="flex items-center justify-center h-full">
+      <div class="bg-neutral-800 rounded-2xl w-150 max-h-[80vh] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 px-6 pt-6">Preferences</h3>
+
+        <!-- Scrollable Content -->
+        <div class="overflow-y-auto flex-1 px-6">
+          <!-- Theme Management Section -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">Theme</label>
+
+            <!-- Current Theme Display -->
+            <div class="mb-3 flex items-center justify-between">
+              <span class="text-sm text-neutral-400">Current: <span id="current-theme-name"
+                  class="text-white font-medium">-</span></span>
+              <span class="text-xs text-neutral-500">Drop SVG files anywhere to load themes</span>
+            </div>
+
+            <!-- Theme Selector -->
+            <select id="theme-select"
+              class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:border-blue-500 transition">
+              <option value="">Loading themes...</option>
+            </select>
+
+            <!-- Theme Actions -->
+            <div class="flex gap-2 mb-4">
+              <button id="create-theme-btn"
+                class="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition text-sm">
+                + New Theme
+              </button>
+              <button id="export-theme-btn"
+                class="flex-1 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition text-sm">
+                Export
+              </button>
+              <button id="delete-theme-btn"
+                class="flex-1 bg-red-700 hover:bg-red-600 px-4 py-2 rounded-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                Delete
+              </button>
+            </div>
+
+            <!-- Theme Preview/Editor -->
+            <div class="bg-neutral-900 rounded-lg p-4">
+              <p class="text-xs text-neutral-500 mb-3">Click on any color to edit (creates custom theme from defaults)
+              </p>
+
+              <!-- Background -->
+              <div class="mb-4">
+                <label class="block text-xs text-neutral-400 mb-1">Background</label>
+                <div class="flex gap-2 items-center">
+                  <div id="color-background"
+                    class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                  </div>
+                  <input type="color" id="input-background" class="hidden">
+                </div>
+              </div>
+
+              <!-- Foreground Colors -->
+              <div class="mb-4">
+                <label class="block text-xs text-neutral-400 mb-2">Foreground</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <div>
+                    <div id="color-f_high"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-f_high" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
+                  </div>
+                  <div>
+                    <div id="color-f_med"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-f_med" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
+                  </div>
+                  <div>
+                    <div id="color-f_low"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-f_low" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
+                  </div>
+                  <div>
+                    <div id="color-f_inv"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-f_inv" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Background Colors -->
+              <div>
+                <label class="block text-xs text-neutral-400 mb-2">Background Shades</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <div>
+                    <div id="color-b_high"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-b_high" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">High</p>
+                  </div>
+                  <div>
+                    <div id="color-b_med"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-b_med" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Med</p>
+                  </div>
+                  <div>
+                    <div id="color-b_low"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-b_low" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Low</p>
+                  </div>
+                  <div>
+                    <div id="color-b_inv"
+                      class="w-full h-12 rounded cursor-pointer border-2 border-neutral-700 hover:border-blue-500 transition">
+                    </div>
+                    <input type="color" id="input-b_inv" class="hidden">
+                    <p class="text-xs text-neutral-500 mt-1 text-center">Inv</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End Scrollable Content -->
+
+        <div class="flex gap-2 justify-end px-6 pb-6 pt-4">
+          <button id="preferences-close"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/renderer.js"></script>
+</body>
+
 </html>
