@@ -1,5 +1,3 @@
-// src/modules/search.js - Updated version with metadata capture
-
 import { formatDuration } from '../utils/formatters.js';
 import { setPendingDownloadMetadata } from './download.js';
 
