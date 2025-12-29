@@ -227,8 +227,12 @@ function initProgressBar() {
   
   // Handle dragging progress bar
   progressBar.addEventListener('mousedown', (e) => {
+    if (!audioElement || !audioElement.duration) return;
+    
     isDragging = true;
+    progressBar.classList.add('dragging');
     updateProgressFromMouse(e, progressBar);
+    e.preventDefault();
   });
   
   document.addEventListener('mousemove', (e) => {
@@ -238,7 +242,10 @@ function initProgressBar() {
   });
   
   document.addEventListener('mouseup', () => {
-    isDragging = false;
+    if (isDragging) {
+      isDragging = false;
+      progressBar.classList.remove('dragging');
+    }
   });
 }
 
@@ -260,6 +267,12 @@ function updateProgressFromMouse(e, progressBar) {
   const progress = document.getElementById('progress');
   if (progress) {
     progress.style.width = `${percent * 100}%`;
+  }
+  
+  // Update current time display
+  const currentTimeEl = document.getElementById('current-time');
+  if (currentTimeEl) {
+    currentTimeEl.textContent = formatTime(newTime);
   }
 }
 

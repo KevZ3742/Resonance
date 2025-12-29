@@ -234,3 +234,17 @@ body.dragging-theme::before {
   z-index: 9999;
   pointer-events: none;
 }
+
+/* Progress bar dragging feedback */
+#progress-bar.dragging {
+  height: 0.5rem; /* 8px */
+}
+
+#progress-bar.dragging #progress-thumb {
+  opacity: 1;
+  transform: translateY(-50%) translateX(-0.375rem) scale(1.2);
+}
+
+#progress-bar.dragging #progress {
+  transition: none;
+}

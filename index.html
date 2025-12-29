@@ -264,8 +264,26 @@
             <span id="current-time">0:00</span>
             <span id="total-time">0:00</span>
           </div>
-          <div class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer" id="progress-bar">
-            <div class="bg-blue-500 h-1.5 rounded-full transition-all" id="progress" style="width: 0%"></div>
+          
+          <!-- Progress Bar Container -->
+          <div class="relative group">
+            <div 
+              class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer transition-all duration-200 group-hover:h-2" 
+              id="progress-bar"
+            >
+              <!-- Progress Fill with Thumb -->
+              <div 
+                class="relative bg-blue-500 h-full rounded-full transition-none pointer-events-none" 
+                id="progress" 
+                style="width: 0%"
+              >
+                <!-- Thumb/Dot -->
+                <div 
+                  class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg opacity-0 transition-all duration-200 -translate-x-1.5 group-hover:opacity-100 group-hover:scale-110"
+                  id="progress-thumb"
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -409,7 +427,7 @@
         </div>
       </div>
     </div>
-
+    
     <script type="module" src="/src/renderer.js"></script>
   </body>
 </html>
