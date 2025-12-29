@@ -1,4 +1,5 @@
 import { metadataManager, showMetadataEditor, formatDuration } from './metadata.js';
+import { playSong } from './player.js';
 
 let currentEditingPlaylist = null;
 let availableSongsCache = [];
@@ -58,6 +59,17 @@ export async function loadAllSongs() {
         e.stopPropagation();
         const songName = btn.getAttribute('data-song');
         showMetadataEditor(songName, loadAllSongs);
+      });
+    });
+    
+    // Add play button handlers
+    document.querySelectorAll('.play-song-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const songName = btn.getAttribute('data-song');
+        const metadata = metadataManager.getMetadata(songName);
+        console.log('Play button clicked for:', songName, metadata);
+        await playSong(songName, metadata);
       });
     });
   } catch (error) {
@@ -430,6 +442,17 @@ async function loadPlaylistSongs(playlistName) {
         e.stopPropagation();
         const songName = btn.getAttribute('data-song');
         showMetadataEditor(songName, () => loadPlaylistSongs(playlistName));
+      });
+    });
+    
+    // Add play button handlers
+    document.querySelectorAll('.play-song-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const songName = btn.getAttribute('data-song');
+        const metadata = metadataManager.getMetadata(songName);
+        console.log('Play button clicked for:', songName, metadata);
+        await playSong(songName, metadata);
       });
     });
     

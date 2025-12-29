@@ -6,7 +6,7 @@ import { app } from 'electron';
  * Get the base Resonance data directory (inside app user data)
  */
 export function getResonanceDataPath() {
-  return path.join(app.getPath('userData'), 'Resonance');
+  return path.join(app.getPath('userData'), 'music');
 }
 
 /**

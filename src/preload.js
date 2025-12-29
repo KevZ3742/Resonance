@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
   getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
   getAllSongsPath: () => ipcRenderer.invoke('get-all-songs-path'),
+  getSongPath: (songFilename) => ipcRenderer.invoke('get-song-path', songFilename),
+  readSongFile: (songFilename) => ipcRenderer.invoke('read-song-file', songFilename),
   createPlaylist: (playlistName) => ipcRenderer.invoke('create-playlist', playlistName),
   addToPlaylist: (playlistName, songFilename) => ipcRenderer.invoke('add-to-playlist', playlistName, songFilename),
   listPlaylists: () => ipcRenderer.invoke('list-playlists'),

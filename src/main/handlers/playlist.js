@@ -7,6 +7,35 @@ import { ensureDownloadsDir, getAllSongsPath, getPlaylistsPath } from '../paths.
  * Register playlist-related IPC handlers
  */
 export function registerPlaylistHandlers() {
+  // Handle getting song file path
+  ipcMain.handle('get-song-path', async (event, songFilename) => {
+    try {
+      const songPath = path.join(getAllSongsPath(), songFilename);
+      if (!fs.existsSync(songPath)) {
+        throw new Error('Song file does not exist');
+      }
+      return songPath;
+    } catch (error) {
+      console.error('Failed to get song path:', error);
+      throw error;
+    }
+  });
+  
+  // Handle reading song file as buffer for playback
+  ipcMain.handle('read-song-file', async (event, songFilename) => {
+    try {
+      const songPath = path.join(getAllSongsPath(), songFilename);
+      if (!fs.existsSync(songPath)) {
+        throw new Error('Song file does not exist');
+      }
+      // Read the file and return as buffer
+      const buffer = fs.readFileSync(songPath);
+      return buffer;
+    } catch (error) {
+      console.error('Failed to read song file:', error);
+      throw error;
+    }
+  });
   // Handle creating a new playlist
   ipcMain.handle('create-playlist', async (event, playlistName) => {
     try {
