@@ -1,5 +1,8 @@
+import { updateLyrics, loadLyrics, clearLyrics } from './lyrics.js';
+
 let isPlaying = false;
 let currentSong = null;
+let currentMetadata = null;
 let audioElement = null;
 let previousVolume = 0.7; // Store volume before mute
 let wasPlayingBeforeScrub = false; // Track if music was playing before scrubbing
@@ -13,6 +16,7 @@ export function initPlayer() {
   initNavigationButtons();
   initVolumeControl();
   initProgressBar();
+  initShowLyricsButton();
 }
 
 /**
@@ -36,6 +40,9 @@ function createAudioElement() {
     if (currentTimeEl) {
       currentTimeEl.textContent = formatTime(audioElement.currentTime);
     }
+    
+    // Update lyrics synchronization
+    updateLyrics(audioElement.currentTime);
   });
   
   // Update total time when metadata loads
@@ -107,6 +114,40 @@ function initNavigationButtons() {
     console.log('Next track');
     // TODO: Implement next track functionality
   });
+}
+
+/**
+ * Initialize show lyrics button
+ */
+function initShowLyricsButton() {
+  const showLyricsBtn = document.getElementById('show-lyrics-btn');
+  
+  if (showLyricsBtn) {
+    showLyricsBtn.addEventListener('click', async () => {
+      if (!currentSong || !currentMetadata) return;
+      
+      const lyricsContainer = document.getElementById('lyrics');
+      const isLyricsVisible = lyricsContainer && lyricsContainer.children.length > 0 && 
+                             !lyricsContainer.textContent.includes('Select a song');
+      
+      if (isLyricsVisible) {
+        // Hide lyrics
+        clearLyrics();
+        showLyricsBtn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Show Lyrics
+        `;
+      } else {
+        // Show lyrics
+        showLyricsBtn.disabled = true;
+        await loadLyrics(currentMetadata, currentSong);
+        showLyricsBtn.textContent = 'Hide Lyrics';
+        showLyricsBtn.disabled = false;
+      }
+    });
+  }
 }
 
 /**
@@ -321,6 +362,7 @@ export async function playSong(songFilename, metadata = {}) {
     // Update UI with song info
     const songTitle = document.getElementById('song-title');
     const songArtist = document.getElementById('song-artist');
+    const showLyricsBtn = document.getElementById('show-lyrics-btn');
     
     if (songTitle) {
       songTitle.textContent = metadata.title || 'Unknown Title';
@@ -330,8 +372,34 @@ export async function playSong(songFilename, metadata = {}) {
       songArtist.textContent = metadata.artist || 'Unknown Artist';
     }
     
-    // Store current song
+    // Store current song and metadata
     currentSong = songFilename;
+    currentMetadata = metadata;
+    
+    // Always clear lyrics when switching songs
+    clearLyrics();
+    
+    // Update button state
+    if (metadata.lyrics) {
+      // If lyrics are cached, load them immediately
+      console.log('Loading cached lyrics');
+      await loadLyrics(metadata, songFilename);
+      if (showLyricsBtn) {
+        showLyricsBtn.textContent = 'Hide Lyrics';
+        showLyricsBtn.classList.remove('hidden');
+      }
+    } else {
+      // Show the button to load lyrics
+      if (showLyricsBtn) {
+        showLyricsBtn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Show Lyrics
+        `;
+        showLyricsBtn.classList.remove('hidden');
+      }
+    }
     
     // Auto-play the song
     try {
@@ -354,6 +422,14 @@ export async function playSong(songFilename, metadata = {}) {
  */
 export function getPlayingState() {
   return isPlaying;
+}
+
+/**
+ * Get the audio element
+ * @returns {HTMLAudioElement|null} The audio element
+ */
+export function getAudioElement() {
+  return audioElement;
 }
 
 /**

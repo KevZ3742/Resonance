@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   downloadSong: (url) => ipcRenderer.invoke('download-song', url),
-  searchSongs: (query, source) => ipcRenderer.invoke('search-songs', query, source),
+  searchSongs: (query, source, limit) => ipcRenderer.invoke('search-songs', query, source, limit),
   openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
   getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
   getAllSongsPath: () => ipcRenderer.invoke('get-all-songs-path'),
@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMetadata: () => ipcRenderer.invoke('get-metadata'),
   setMetadata: (metadata) => ipcRenderer.invoke('set-metadata', metadata),
   getMp3Duration: (filename) => ipcRenderer.invoke('get-mp3-duration', filename),
+  fetchLyrics: (title, artist) => ipcRenderer.invoke('fetch-lyrics', title, artist),
   onOpenPreferences: (callback) => {
     ipcRenderer.on('open-preferences', () => callback());
   },

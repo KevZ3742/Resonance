@@ -4,6 +4,11 @@ import { setPendingDownloadMetadata } from './download.js';
 let currentSearchSource = 'youtube';
 let searchTimeout = null;
 let currentSearchId = 0;
+let currentQuery = '';
+let allResults = [];
+let displayedCount = 0;
+const RESULTS_PER_PAGE = 10;
+const INITIAL_FETCH_COUNT = 50;
 
 /**
  * Initialize search functionality
@@ -51,6 +56,9 @@ function initSearchSourceButtons() {
       if (query) {
         const searchResults = document.getElementById('search-results');
         searchResults.innerHTML = '<p class="text-neutral-400">Searching...</p>';
+        allResults = [];
+        displayedCount = 0;
+        currentQuery = query;
         performSearch(query, source, currentSearchId);
       }
     });
@@ -75,6 +83,9 @@ function initSearchInput() {
     // If empty, show default message
     if (!query) {
       searchResults.innerHTML = '<p class="text-neutral-400">Search for songs</p>';
+      allResults = [];
+      displayedCount = 0;
+      currentQuery = '';
       return;
     }
     
@@ -84,6 +95,11 @@ function initSearchInput() {
     // Increment search ID for this new search
     currentSearchId++;
     const thisSearchId = currentSearchId;
+    
+    // Reset pagination for new query
+    allResults = [];
+    displayedCount = 0;
+    currentQuery = query;
     
     // Debounce search by 500ms
     searchTimeout = setTimeout(() => {
@@ -99,11 +115,14 @@ async function performSearch(query, source, searchId) {
   console.log(`Searching ${source} for: ${query} (ID: ${searchId})`);
   
   try {
-    const results = await window.electronAPI.searchSongs(query, source);
+    // Fetch a large batch of results
+    const results = await window.electronAPI.searchSongs(query, source, INITIAL_FETCH_COUNT);
     
     // Only display results if this search is still the current one
     if (searchId === currentSearchId) {
-      displaySearchResults(results, source);
+      allResults = results;
+      displayedCount = 0;
+      displayMoreResults(source);
     } else {
       console.log(`Ignoring outdated search results (ID: ${searchId}, current: ${currentSearchId})`);
     }
@@ -118,9 +137,20 @@ async function performSearch(query, source, searchId) {
 }
 
 /**
+ * Display more results from the fetched batch
+ */
+function displayMoreResults(source) {
+  const newDisplayCount = Math.min(displayedCount + RESULTS_PER_PAGE, allResults.length);
+  const resultsToShow = allResults.slice(0, newDisplayCount);
+  displayedCount = newDisplayCount;
+  
+  displaySearchResults(resultsToShow, source, displayedCount < allResults.length);
+}
+
+/**
  * Display search results in the UI
  */
-function displaySearchResults(results, source) {
+function displaySearchResults(results, source, hasMore = false) {
   const searchResults = document.getElementById('search-results');
   
   if (!results || results.length === 0) {
@@ -128,7 +158,7 @@ function displaySearchResults(results, source) {
     return;
   }
   
-  searchResults.innerHTML = results.map((result, index) => `
+  const resultsHTML = results.map((result, index) => `
     <div class="bg-neutral-700 hover:bg-neutral-600 rounded-lg p-3 cursor-pointer transition group" data-result='${JSON.stringify(result).replace(/'/g, "&#39;")}'>
       <div class="flex items-center gap-3">
         ${result.thumbnail ? `
@@ -163,6 +193,17 @@ function displaySearchResults(results, source) {
     </div>
   `).join('');
   
+  // Add Load More button if there are more results
+  const loadMoreButton = hasMore ? `
+    <div class="flex justify-center mt-4">
+      <button id="load-more-btn" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
+        Load More Results
+      </button>
+    </div>
+  ` : '';
+  
+  searchResults.innerHTML = resultsHTML + loadMoreButton;
+  
   // Add event listeners to all download buttons
   results.forEach((result, index) => {
     const btn = document.getElementById(`download-btn-${index}`);
@@ -173,6 +214,16 @@ function displaySearchResults(results, source) {
       });
     }
   });
+  
+  // Add event listener to Load More button
+  if (hasMore) {
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => {
+        displayMoreResults(source);
+      });
+    }
+  }
 }
 
 /**

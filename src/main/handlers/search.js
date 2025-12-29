@@ -5,16 +5,16 @@ import { youtubeDl } from '../ytdlp.js';
  * Register search-related IPC handlers
  */
 export function registerSearchHandlers() {
-  ipcMain.handle('search-songs', async (event, query, source) => {
+  ipcMain.handle('search-songs', async (event, query, source, limit = 10) => {
     try {
-      console.log(`Searching ${source} for: ${query}`);
+      console.log(`Searching ${source} for: ${query} (limit: ${limit})`);
       
       let searchResults = [];
       
       if (source === 'youtube') {
         // Use yt-dlp to search YouTube
         const result = await youtubeDl.execPromise([
-          `ytsearch10:${query}`,
+          `ytsearch${limit}:${query}`,
           '--dump-json',
           '--flat-playlist',
           '--no-playlist'
@@ -43,7 +43,7 @@ export function registerSearchHandlers() {
       } else if (source === 'soundcloud') {
         // Use yt-dlp to search SoundCloud
         const result = await youtubeDl.execPromise([
-          `scsearch10:${query}`,
+          `scsearch${limit}:${query}`,
           '--dump-json',
           '--flat-playlist',
           '--no-playlist'

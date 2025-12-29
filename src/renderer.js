@@ -8,6 +8,7 @@ import { initDownload } from './modules/download.js';
 import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists.js';
 import { initPreferences } from './modules/preferences.js';
 import { metadataManager } from './modules/metadata.js';
+import { initLyrics } from './modules/lyrics.js';
 
 /**
  * Initialize the application
@@ -21,6 +22,7 @@ async function initApp() {
   initPlayer();
   initSearch();
   initPreferences();
+  initLyrics();
   
   // Initialize download with callback for when downloads complete
   initDownload(handleDownloadComplete);

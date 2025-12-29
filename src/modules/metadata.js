@@ -30,7 +30,8 @@ class MetadataManager {
       title: this.extractTitleFromFilename(filename),
       artist: 'Unknown Artist',
       duration: null,
-      thumbnail: null
+      thumbnail: null,
+      lyrics: null
     };
   }
 

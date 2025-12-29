@@ -31,7 +31,10 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@mjba/lyrics": "^1.1.0",
+    "@stef-0012/synclyrics": "^2.5.10",
     "@tailwindcss/vite": "^4.1.18",
+    "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1",
     "ffmpeg-static": "^5.3.0",
     "tailwindcss": "^4.1.18",
