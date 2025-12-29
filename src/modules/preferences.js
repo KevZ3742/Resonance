@@ -66,11 +66,21 @@ async function loadTheme() {
  * Initialize preferences modal
  */
 function initPreferencesModal() {
+  const modal = document.getElementById('preferences-modal');
   const preferencesCloseBtn = document.getElementById('preferences-close');
   const themeSelect = document.getElementById('theme-select');
   const createThemeBtn = document.getElementById('create-theme-btn');
   const exportThemeBtn = document.getElementById('export-theme-btn');
   const deleteThemeBtn = document.getElementById('delete-theme-btn');
+
+  // Close modal when clicking on backdrop
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        hidePreferencesModal();
+      }
+    });
+  }
 
   if (preferencesCloseBtn) {
     preferencesCloseBtn.addEventListener('click', () => {
