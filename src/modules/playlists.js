@@ -5,6 +5,7 @@ let currentEditingPlaylist = null;
 let availableSongsCache = [];
 let draggedElement = null;
 let draggedIndex = null;
+let contextMenu = null;
 
 /**
  * Initialize playlist management functionality
@@ -13,6 +14,220 @@ export function initPlaylists() {
   initCreatePlaylistButton();
   initPlaylistModal();
   initBackButton();
+  initContextMenu();
+}
+
+/**
+ * Initialize context menu for songs
+ */
+function initContextMenu() {
+  // Create context menu element
+  contextMenu = document.createElement('div');
+  contextMenu.id = 'song-context-menu';
+  contextMenu.className = 'hidden fixed bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 py-1 min-w-[180px]';
+  contextMenu.innerHTML = `
+    <button class="context-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="play">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+      Play
+    </button>
+    <button class="context-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="add-to-queue">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+      </svg>
+      Add to Queue
+    </button>
+    <div class="border-t border-neutral-700 my-1"></div>
+    <button class="context-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="edit">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+      </svg>
+      Edit Metadata
+    </button>
+    <button class="context-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2 text-red-400 hidden" data-action="remove">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+      </svg>
+      Remove from Playlist
+    </button>
+  `;
+  document.body.appendChild(contextMenu);
+
+  // Close context menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!contextMenu.contains(e.target)) {
+      hideContextMenu();
+    }
+  });
+
+  // Handle context menu actions
+  contextMenu.addEventListener('click', (e) => {
+    const action = e.target.closest('.context-menu-item')?.getAttribute('data-action');
+    if (!action) return;
+
+    const songName = contextMenu.dataset.song;
+    const playlistName = contextMenu.dataset.playlist;
+
+    switch (action) {
+      case 'play':
+        handlePlaySong(songName);
+        break;
+      case 'add-to-queue':
+        handleAddToQueue(songName);
+        break;
+      case 'edit':
+        handleEditMetadata(songName);
+        break;
+      case 'remove':
+        handleRemoveSong(songName, playlistName);
+        break;
+    }
+
+    hideContextMenu();
+  });
+}
+
+/**
+ * Show context menu at position
+ */
+function showContextMenu(x, y, songName, playlistName = null) {
+  contextMenu.dataset.song = songName;
+  contextMenu.dataset.playlist = playlistName || '';
+  
+  // Show/hide remove button and divider based on context
+  const removeBtn = contextMenu.querySelector('[data-action="remove"]');
+  if (playlistName) {
+    removeBtn.classList.remove('hidden');
+    // Add divider before remove button in playlist context
+    if (!removeBtn.previousElementSibling || !removeBtn.previousElementSibling.classList.contains('border-t')) {
+      const divider = document.createElement('div');
+      divider.className = 'border-t border-neutral-700 my-1 playlist-divider';
+      removeBtn.parentNode.insertBefore(divider, removeBtn);
+    }
+  } else {
+    removeBtn.classList.add('hidden');
+    // Remove the playlist divider if it exists
+    const playlistDivider = contextMenu.querySelector('.playlist-divider');
+    if (playlistDivider) {
+      playlistDivider.remove();
+    }
+  }
+
+  contextMenu.classList.remove('hidden');
+  
+  // Position the menu
+  const menuRect = contextMenu.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Adjust position if menu would go off screen
+  let left = x;
+  let top = y;
+  
+  if (x + menuRect.width > viewportWidth) {
+    left = x - menuRect.width;
+  }
+  
+  if (y + menuRect.height > viewportHeight) {
+    top = y - menuRect.height;
+  }
+  
+  contextMenu.style.left = `${left}px`;
+  contextMenu.style.top = `${top}px`;
+}
+
+/**
+ * Hide context menu
+ */
+function hideContextMenu() {
+  contextMenu.classList.add('hidden');
+}
+
+/**
+ * Handle add to queue from context menu
+ */
+function handleAddToQueue(songName) {
+  const metadata = metadataManager.getMetadata(songName);
+  
+  // Import queue manager if available
+  if (window.queueManager) {
+    window.queueManager.addToQueue(songName, metadata);
+    
+    // Show feedback
+    showNotification(`Added "${metadata.title}" to queue`);
+  } else {
+    console.error('Queue manager not available');
+  }
+}
+
+/**
+ * Show temporary notification
+ */
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 shadow-lg z-50 transition-opacity';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
+}
+
+/**
+ * Handle play song from context menu
+ */
+async function handlePlaySong(songName) {
+  const metadata = metadataManager.getMetadata(songName);
+  await playSong(songName, metadata);
+}
+
+/**
+ * Handle edit metadata from context menu
+ */
+function handleEditMetadata(songName) {
+  const callback = currentEditingPlaylist ? 
+    () => loadPlaylistSongs(currentEditingPlaylist) : 
+    loadAllSongs;
+  showMetadataEditor(songName, callback);
+}
+
+/**
+ * Handle remove song from context menu
+ */
+async function handleRemoveSong(songName, playlistName) {
+  if (!playlistName) return;
+  await removeSongFromPlaylist(playlistName, songName);
+}
+
+/**
+ * Calculate total duration of songs
+ */
+function calculateTotalDuration(songs) {
+  let total = 0;
+  for (const song of songs) {
+    const metadata = metadataManager.getMetadata(song);
+    if (metadata.duration) {
+      total += metadata.duration;
+    }
+  }
+  return total;
+}
+
+/**
+ * Format total duration for display
+ */
+function formatTotalDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -27,49 +242,49 @@ export async function loadAllSongs() {
       allSongsList.innerHTML = '<p class="text-neutral-400">No songs in library</p>';
       return;
     }
+
+    // Calculate total duration
+    const totalDuration = calculateTotalDuration(songs);
     
-    allSongsList.innerHTML = songs.map(song => {
-      const metadata = metadataManager.getMetadata(song);
-      return `
-        <div class="bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition">
-          <div class="flex items-center gap-3">
-            <div class="flex-1 min-w-0">
-              <div class="font-medium truncate">${metadata.title}</div>
-              <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
-              ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
-            </div>
-            <div class="flex gap-2">
-              <button class="edit-metadata-btn text-neutral-400 hover:text-white text-sm px-3 py-1" data-song="${song}">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
-              </button>
-              <button class="play-song-btn text-blue-400 hover:text-blue-300 text-sm px-3 py-1" data-song="${song}">
-                Play
-              </button>
-            </div>
+    allSongsList.innerHTML = `
+      <div class="mb-4 pb-4 border-b border-neutral-700">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-lg font-semibold">${songs.length} song${songs.length !== 1 ? 's' : ''}</span>
+            ${totalDuration > 0 ? `<span class="text-neutral-400 text-sm ml-2">· ${formatTotalDuration(totalDuration)}</span>` : ''}
           </div>
         </div>
-      `;
-    }).join('');
+      </div>
+      ${songs.map(song => {
+        const metadata = metadataManager.getMetadata(song);
+        return `
+          <div class="song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition cursor-pointer" data-song="${song}">
+            <div class="flex items-center gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium truncate">${metadata.title}</div>
+                <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
+                ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
     
-    // Add edit metadata handlers
-    document.querySelectorAll('.edit-metadata-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const songName = btn.getAttribute('data-song');
-        showMetadataEditor(songName, loadAllSongs);
-      });
-    });
-    
-    // Add play button handlers
-    document.querySelectorAll('.play-song-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const songName = btn.getAttribute('data-song');
+    // Add context menu handlers
+    document.querySelectorAll('.song-item').forEach(item => {
+      const songName = item.getAttribute('data-song');
+      
+      // Left click to play
+      item.addEventListener('click', async () => {
         const metadata = metadataManager.getMetadata(songName);
-        console.log('Play button clicked for:', songName, metadata);
         await playSong(songName, metadata);
+      });
+      
+      // Right click for context menu
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, songName);
       });
     });
   } catch (error) {
@@ -98,7 +313,7 @@ export async function loadPlaylists() {
           </svg>
           <div>
             <div class="font-medium text-lg">${playlist}</div>
-            <div class="text-neutral-400 text-sm" id="playlist-${playlist}-count">Loading...</div>
+            <div class="text-neutral-400 text-sm" id="playlist-${playlist}-info">Loading...</div>
           </div>
         </div>
         <button class="text-blue-400 hover:text-blue-300">
@@ -109,16 +324,21 @@ export async function loadPlaylists() {
       </div>
     `).join('');
     
-    // Load song counts for each playlist
+    // Load info for each playlist
     for (const playlist of playlists) {
       try {
         const songs = await window.electronAPI.listPlaylistSongs(playlist);
-        const countElement = document.getElementById(`playlist-${playlist}-count`);
-        if (countElement) {
-          countElement.textContent = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+        const duration = calculateTotalDuration(songs);
+        const infoElement = document.getElementById(`playlist-${playlist}-info`);
+        if (infoElement) {
+          let info = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+          if (duration > 0) {
+            info += ` · ${formatTotalDuration(duration)}`;
+          }
+          infoElement.textContent = info;
         }
       } catch (error) {
-        console.error(`Failed to load song count for ${playlist}:`, error);
+        console.error(`Failed to load info for ${playlist}:`, error);
       }
     }
     
@@ -148,7 +368,6 @@ function initCreatePlaylistButton() {
     });
   }
 
-  // Alternative: Use event delegation
   document.addEventListener('click', (e) => {
     if (e.target.id === 'create-playlist-btn' || e.target.closest('#create-playlist-btn')) {
       e.preventDefault();
@@ -178,7 +397,6 @@ function initPlaylistModal() {
     });
   }
 
-  // Allow Enter key to create playlist
   if (playlistNameInput) {
     playlistNameInput.addEventListener('keypress', async (e) => {
       if (e.key === 'Enter') {
@@ -248,14 +466,11 @@ function initBackButton() {
 async function openPlaylistEditor(playlistName) {
   currentEditingPlaylist = playlistName;
   
-  // Hide playlists view, show editor view
   document.getElementById('playlists-view').classList.add('hidden');
   document.getElementById('playlist-edit-view').classList.remove('hidden');
   
-  // Set title
   document.getElementById('playlist-edit-title').textContent = playlistName;
   
-  // Load available songs and playlist songs
   await loadPlaylistSongs(playlistName);
   await loadAvailableSongs(playlistName);
 }
@@ -269,17 +484,13 @@ async function loadAvailableSongs(playlistName) {
     const playlistSongs = await window.electronAPI.listPlaylistSongs(playlistName);
     const searchInput = document.getElementById('available-songs-search');
     
-    // Filter out songs that are already in the playlist
     const playlistSongNames = playlistSongs.map(song => song.replace('.ref', ''));
     const availableSongs = allSongs.filter(song => !playlistSongNames.includes(song));
     
-    // Cache the available songs for search filtering
     availableSongsCache = availableSongs;
     
-    // Setup search functionality
     setupAvailableSongsSearch();
     
-    // Preserve the search query and filter accordingly
     const currentQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
     if (currentQuery) {
       const filteredSongs = availableSongs.filter(song => {
@@ -333,7 +544,6 @@ function renderAvailableSongs(songs) {
     `;
   }).join('');
   
-  // Add click handlers
   document.querySelectorAll('.add-song-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const songName = btn.getAttribute('data-song');
@@ -349,7 +559,6 @@ function setupAvailableSongsSearch() {
   const searchInput = document.getElementById('available-songs-search');
   if (!searchInput) return;
   
-  // Remove previous listener if exists
   const newSearchInput = searchInput.cloneNode(true);
   searchInput.parentNode.replaceChild(newSearchInput, searchInput);
   
@@ -384,17 +593,14 @@ async function loadPlaylistSongs(playlistName) {
       return;
     }
     
-    // Get saved order and apply it
     const savedOrder = await window.electronAPI.getPlaylistOrder(playlistName);
     if (savedOrder && savedOrder.length > 0) {
-      // Sort songs according to saved order
       const orderedSongs = [];
       for (const orderedSong of savedOrder) {
         if (songs.includes(orderedSong)) {
           orderedSongs.push(orderedSong);
         }
       }
-      // Add any songs not in the saved order at the end
       for (const song of songs) {
         if (!orderedSongs.includes(song)) {
           orderedSongs.push(song);
@@ -402,70 +608,60 @@ async function loadPlaylistSongs(playlistName) {
       }
       songs = orderedSongs;
     }
+
+    // Calculate total duration
+    const totalDuration = calculateTotalDuration(songs);
     
-    playlistSongsList.innerHTML = songs.map((song, index) => {
-      const metadata = metadataManager.getMetadata(song);
-      return `
-        <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition" data-song="${song}" data-index="${index}" draggable="true">
-          <div class="flex items-center gap-3">
-            <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
-              </svg>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="font-medium truncate">${metadata.title}</div>
-              <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
-              ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
-            </div>
-            <div class="flex gap-2">
-              <button class="edit-metadata-btn text-neutral-400 hover:text-white text-sm px-2 py-1" data-song="${song}">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
-              </button>
-              <button class="play-song-btn text-blue-400 hover:text-blue-300 text-sm px-3 py-1" data-song="${song}">
-                Play
-              </button>
-              <button class="remove-song-btn text-red-400 hover:text-red-300 text-sm px-3 py-1" data-song="${song}">
-                Remove
-              </button>
-            </div>
+    playlistSongsList.innerHTML = `
+      <div class="mb-4 pb-4 border-b border-neutral-700">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-lg font-semibold">${songs.length} song${songs.length !== 1 ? 's' : ''}</span>
+            ${totalDuration > 0 ? `<span class="text-neutral-400 text-sm ml-2">· ${formatTotalDuration(totalDuration)}</span>` : ''}
           </div>
         </div>
-      `;
-    }).join('');
+      </div>
+      ${songs.map((song, index) => {
+        const metadata = metadataManager.getMetadata(song);
+        return `
+          <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition cursor-pointer" data-song="${song}" data-index="${index}" draggable="true">
+            <div class="flex items-center gap-3">
+              <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium truncate">${metadata.title}</div>
+                <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
+                ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
     
-    // Add edit metadata handlers
-    document.querySelectorAll('.edit-metadata-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const songName = btn.getAttribute('data-song');
-        showMetadataEditor(songName, () => loadPlaylistSongs(playlistName));
-      });
-    });
-    
-    // Add play button handlers
-    document.querySelectorAll('.play-song-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const songName = btn.getAttribute('data-song');
+    // Add event handlers for playlist songs
+    document.querySelectorAll('.playlist-song-item').forEach(item => {
+      const songName = item.getAttribute('data-song');
+      
+      // Left click to play
+      item.addEventListener('click', async (e) => {
+        // Don't trigger if clicking on drag handle
+        if (e.target.closest('.drag-handle')) return;
+        
         const metadata = metadataManager.getMetadata(songName);
-        console.log('Play button clicked for:', songName, metadata);
         await playSong(songName, metadata);
       });
-    });
-    
-    // Add remove handlers
-    document.querySelectorAll('.remove-song-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const songName = btn.getAttribute('data-song');
-        await removeSongFromPlaylist(playlistName, songName);
+      
+      // Right click for context menu
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, songName, playlistName);
       });
     });
     
-    // Add drag and drop handlers
     setupDragAndDrop(playlistName);
   } catch (error) {
     console.error('Failed to load playlist songs:', error);
@@ -551,21 +747,13 @@ async function handleDrop(e, playlistName) {
   const targetIndex = parseInt(targetElement.getAttribute('data-index'));
   
   if (draggedElement !== targetElement) {
-    // Get all songs in current order
     const allItems = Array.from(document.querySelectorAll('.playlist-song-item'));
     const songs = allItems.map(item => item.getAttribute('data-song'));
     
-    console.log('Reordering from index', draggedIndex, 'to', targetIndex);
-    console.log('Before:', songs);
-    
-    // Reorder the array
     const draggedSong = songs[draggedIndex];
     songs.splice(draggedIndex, 1);
     songs.splice(targetIndex, 0, draggedSong);
     
-    console.log('After:', songs);
-    
-    // Save the new order
     try {
       await window.electronAPI.reorderPlaylistSongs(playlistName, songs);
       await loadPlaylistSongs(playlistName);
@@ -582,7 +770,6 @@ async function handleDrop(e, playlistName) {
 function handleDragEnd(e) {
   e.currentTarget.style.opacity = '1';
   
-  // Remove all drag indicators
   document.querySelectorAll('.playlist-song-item').forEach(item => {
     item.classList.remove('border-2', 'border-blue-500');
   });
@@ -596,7 +783,7 @@ export function getCurrentEditingPlaylist() {
 }
 
 /**
- * Refresh available songs (for when new songs are downloaded)
+ * Refresh available songs
  */
 export async function refreshAvailableSongs() {
   if (currentEditingPlaylist) {
