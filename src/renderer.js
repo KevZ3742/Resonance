@@ -5,7 +5,7 @@ import { initTabs, initLibraryTabs } from './modules/tabs.js';
 import { initPlayer } from './modules/player.js';
 import { initSearch } from './modules/search.js';
 import { initDownload } from './modules/download.js';
-import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists.js';
+import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists/index.js';
 import { initPreferences } from './modules/preferences.js';
 import { metadataManager } from './modules/metadata.js';
 
