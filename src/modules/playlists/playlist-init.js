@@ -1,4 +1,3 @@
-// Initialization and setup for playlist functionality
 import { initCreatePlaylistButton, initPlaylistModal } from './playlist-modal.js';
 import { initBackButton } from './playlist-editor.js';
 import { initContextMenu } from './context-menu.js';

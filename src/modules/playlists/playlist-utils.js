@@ -1,4 +1,3 @@
-// Utility functions for playlists
 import { metadataManager } from '../metadata.js';
 
 /**

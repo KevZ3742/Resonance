@@ -1,4 +1,3 @@
-// API wrapper functions for playlist operations
 import { loadPlaylistSongs, loadAvailableSongs } from './playlist-editor.js';
 
 /**

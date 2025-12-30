@@ -1,4 +1,3 @@
-// Playlist editor functionality
 import { metadataManager, formatDuration } from '../metadata.js';
 import { playSong } from '../player.js';
 import { showContextMenu, setCurrentEditingPlaylist as setContextMenuPlaylist } from './context-menu.js';

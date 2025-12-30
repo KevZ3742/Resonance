@@ -1,4 +1,3 @@
-// Playlist list view functionality
 import { loadPlaylistSongs, loadAvailableSongs, setCurrentEditingPlaylist } from './playlist-editor.js';
 import { calculateTotalDuration, formatTotalDuration } from './playlist-utils.js';
 

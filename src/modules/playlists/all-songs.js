@@ -1,4 +1,3 @@
-// All songs view functionality
 import { metadataManager, formatDuration } from '../metadata.js';
 import { playSong } from '../player.js';
 import { showContextMenu } from './context-menu.js';

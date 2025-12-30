@@ -1,4 +1,3 @@
-// Playlist creation modal functionality
 import { loadPlaylists } from './playlist-list.js';
 
 /**

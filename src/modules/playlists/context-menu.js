@@ -1,4 +1,3 @@
-// Context menu functionality for songs
 import { metadataManager, showMetadataEditor } from '../metadata.js';
 import { playSong } from '../player.js';
 import { removeSongFromPlaylist } from './playlist-api.js';

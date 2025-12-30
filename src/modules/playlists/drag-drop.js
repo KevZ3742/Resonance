@@ -1,4 +1,3 @@
-// Drag and drop functionality for playlist reordering
 import { reorderPlaylistSongs } from './playlist-api.js';
 import { loadPlaylistSongs } from './playlist-editor.js';
 
