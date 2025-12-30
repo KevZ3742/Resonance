@@ -110,7 +110,6 @@ function initPlaylistMenu() {
     });
   }
   
-  // NEW: Delete playlist handler
   if (deletePlaylistBtn) {
     deletePlaylistBtn.addEventListener('click', async () => {
       menuDropdown.classList.add('hidden');
