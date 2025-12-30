@@ -7,6 +7,7 @@ import { calculateTotalDuration, formatTotalDuration } from './playlist-utils.js
 
 let currentEditingPlaylist = null;
 let availableSongsCache = [];
+let addSongsExpanded = false;
 
 /**
  * Set current editing playlist
@@ -34,9 +35,66 @@ export function initBackButton() {
       document.getElementById('playlist-edit-view').classList.add('hidden');
       document.getElementById('playlists-view').classList.remove('hidden');
       currentEditingPlaylist = null;
+      addSongsExpanded = false;
+      
       // Dynamically import to avoid circular dependency
       const { loadPlaylists } = await import('./playlist-list.js');
       await loadPlaylists();
+    });
+  }
+  
+  // Initialize menu button and toggle functionality
+  initPlaylistMenu();
+}
+
+/**
+ * Initialize playlist menu and collapsible add songs section
+ */
+function initPlaylistMenu() {
+  const menuBtn = document.getElementById('playlist-menu-btn');
+  const menuDropdown = document.getElementById('playlist-menu-dropdown');
+  const toggleAddSongsBtn = document.getElementById('toggle-add-songs-btn');
+  const addSongsSection = document.getElementById('add-songs-section');
+  const closeAddSongsBtn = document.getElementById('close-add-songs-btn');
+  
+  if (menuBtn && menuDropdown) {
+    // Toggle menu dropdown
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuDropdown.classList.toggle('hidden');
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+        menuDropdown.classList.add('hidden');
+      }
+    });
+  }
+  
+  if (toggleAddSongsBtn && addSongsSection) {
+    toggleAddSongsBtn.addEventListener('click', () => {
+      addSongsExpanded = !addSongsExpanded;
+      
+      if (addSongsExpanded) {
+        addSongsSection.classList.remove('hidden');
+        // Load available songs when opening
+        if (currentEditingPlaylist) {
+          loadAvailableSongs(currentEditingPlaylist);
+        }
+      } else {
+        addSongsSection.classList.add('hidden');
+      }
+      
+      // Close the menu dropdown
+      menuDropdown.classList.add('hidden');
+    });
+  }
+  
+  if (closeAddSongsBtn && addSongsSection) {
+    closeAddSongsBtn.addEventListener('click', () => {
+      addSongsExpanded = false;
+      addSongsSection.classList.add('hidden');
     });
   }
 }
@@ -125,18 +183,29 @@ function createPlaylistSongElement(song, index) {
  * Attach event listeners to playlist song items
  */
 function attachPlaylistSongEventListeners(playlistName) {
-  document.querySelectorAll('.playlist-song-item').forEach(item => {
+  const items = document.querySelectorAll('.playlist-song-item');
+  console.log('Attaching event listeners to', items.length, 'playlist items');
+  
+  items.forEach(item => {
     const songName = item.getAttribute('data-song');
     
-    item.addEventListener('click', async (e) => {
+    // Remove old listeners by cloning
+    const newItem = item.cloneNode(true);
+    item.parentNode.replaceChild(newItem, item);
+    
+    // Click handler
+    newItem.addEventListener('click', async (e) => {
       if (e.target.closest('.drag-handle')) return;
       
       const metadata = metadataManager.getMetadata(songName);
       await playSong(songName, metadata);
     });
     
-    item.addEventListener('contextmenu', (e) => {
+    // Context menu handler
+    newItem.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      console.log('Right-click on song:', songName, 'in playlist:', playlistName);
       showContextMenu(e.clientX, e.clientY, songName, playlistName);
     });
   });
@@ -264,7 +333,7 @@ function setupAvailableSongsSearch() {
  * Refresh available songs
  */
 export async function refreshAvailableSongs() {
-  if (currentEditingPlaylist) {
+  if (currentEditingPlaylist && addSongsExpanded) {
     await loadAvailableSongs(currentEditingPlaylist);
   }
 }

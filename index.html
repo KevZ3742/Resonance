@@ -102,17 +102,46 @@
                     <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                   </svg>
                 </button>
-                <h2 class="text-xl font-bold" id="playlist-edit-title">Playlist Name</h2>
+                <h2 class="text-xl font-bold flex-1" id="playlist-edit-title">Playlist Name</h2>
+                
+                <!-- Menu button -->
+                <div class="relative">
+                  <button class="text-neutral-400 hover:text-white transition p-2 rounded-lg hover:bg-neutral-700" id="playlist-menu-btn">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    </svg>
+                  </button>
+                  
+                  <!-- Dropdown menu -->
+                  <div class="hidden absolute right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 min-w-45" id="playlist-menu-dropdown">
+                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" id="toggle-add-songs-btn">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                      </svg>
+                      Add Songs
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <!-- Add songs section -->
-              <div class="mb-4 pb-4 border-b border-neutral-700">
-                <h3 class="text-sm font-semibold text-neutral-400 mb-2">Add Songs</h3>
-                <input type="text" placeholder="Search available songs..."
-                  class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
-                  id="available-songs-search">
-                <div id="available-songs-list" class="space-y-1 max-h-48 overflow-y-auto">
-                  <p class="text-neutral-500 text-sm">No songs available</p>
+              <!-- Collapsible add songs section -->
+              <div class="mb-4 pb-4 border-b border-neutral-700 hidden" id="add-songs-section">
+                <div class="bg-neutral-900 rounded-lg p-4">
+                  <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-semibold">Add Songs to Playlist</h3>
+                    <button class="text-neutral-500 hover:text-neutral-300 transition" id="close-add-songs-btn">
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <input type="text" placeholder="Search available songs..."
+                    class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
+                    id="available-songs-search">
+                  <div id="available-songs-list" class="space-y-1 max-h-48 overflow-y-auto">
+                    <p class="text-neutral-500 text-sm">No songs available</p>
+                  </div>
                 </div>
               </div>
 

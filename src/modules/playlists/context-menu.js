@@ -11,7 +11,13 @@ let currentEditingPlaylist = null;
  * Initialize context menu for songs
  */
 export function initContextMenu() {
-  createContextMenu();
+  // Check if context menu already exists
+  contextMenu = document.getElementById('song-context-menu');
+  
+  if (!contextMenu) {
+    createContextMenu();
+  }
+  
   setupContextMenuListeners();
 }
 
@@ -63,9 +69,11 @@ function createContextMenu() {
  * Setup context menu listeners
  */
 function setupContextMenuListeners() {
+  if (!contextMenu) return;
+  
   // Close context menu when clicking outside
   document.addEventListener('click', (e) => {
-    if (!contextMenu.contains(e.target)) {
+    if (contextMenu && !contextMenu.contains(e.target)) {
       hideContextMenu();
     }
   });
@@ -107,22 +115,29 @@ async function handleContextMenuAction(action, songName, playlistName) {
  * Show context menu at position
  */
 export function showContextMenu(x, y, songName, playlistName = null) {
+  if (!contextMenu) {
+    console.error('Context menu not initialized');
+    return;
+  }
+  
   contextMenu.dataset.song = songName;
   contextMenu.dataset.playlist = playlistName || '';
   
   const removeBtn = contextMenu.querySelector('[data-action="remove"]');
-  if (playlistName) {
-    removeBtn.classList.remove('hidden');
-    if (!removeBtn.previousElementSibling || !removeBtn.previousElementSibling.classList.contains('border-t')) {
-      const divider = document.createElement('div');
-      divider.className = 'border-t border-neutral-700 my-1 playlist-divider';
-      removeBtn.parentNode.insertBefore(divider, removeBtn);
-    }
-  } else {
-    removeBtn.classList.add('hidden');
-    const playlistDivider = contextMenu.querySelector('.playlist-divider');
-    if (playlistDivider) {
-      playlistDivider.remove();
+  if (removeBtn) {
+    if (playlistName) {
+      removeBtn.classList.remove('hidden');
+      if (!removeBtn.previousElementSibling || !removeBtn.previousElementSibling.classList.contains('border-t')) {
+        const divider = document.createElement('div');
+        divider.className = 'border-t border-neutral-700 my-1 playlist-divider';
+        removeBtn.parentNode.insertBefore(divider, removeBtn);
+      }
+    } else {
+      removeBtn.classList.add('hidden');
+      const playlistDivider = contextMenu.querySelector('.playlist-divider');
+      if (playlistDivider) {
+        playlistDivider.remove();
+      }
     }
   }
 
@@ -151,7 +166,9 @@ export function showContextMenu(x, y, songName, playlistName = null) {
  * Hide context menu
  */
 function hideContextMenu() {
-  contextMenu.classList.add('hidden');
+  if (contextMenu) {
+    contextMenu.classList.add('hidden');
+  }
 }
 
 /**
