@@ -115,17 +115,21 @@ function initPlaylistMenu() {
       menuDropdown.classList.add('hidden');
       
       if (currentEditingPlaylist) {
-        const confirmed = confirm(`Delete playlist "${currentEditingPlaylist}"? This cannot be undone.`);
+        const confirmed = confirm(`Delete playlist "${currentEditingPlaylist}"? This will permanently delete the playlist and all its contents. This cannot be undone.`);
         if (confirmed) {
           try {
-            // Would need to implement delete-playlist handler in backend
-            // For now, just navigate back
+            await window.electronAPI.deletePlaylist(currentEditingPlaylist);
+            
+            // Navigate back to playlists view
             document.getElementById('playlist-edit-view').classList.add('hidden');
             document.getElementById('playlists-view').classList.remove('hidden');
             currentEditingPlaylist = null;
+            addSongsExpanded = false;
             
             const { loadPlaylists } = await import('./playlist-list.js');
             await loadPlaylists();
+            
+            showNotification(`Playlist deleted successfully`);
           } catch (error) {
             console.error('Failed to delete playlist:', error);
             alert('Failed to delete playlist: ' + error.message);

@@ -233,3 +233,22 @@ ipcMain.handle('rename-playlist', async (event, oldName, newName) => {
     throw error;
   }
 });
+
+// Handle deleting a playlist
+ipcMain.handle('delete-playlist', async (event, playlistName) => {
+  try {
+    const playlistPath = path.join(getPlaylistsPath(), playlistName);
+    
+    if (!fs.existsSync(playlistPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    // Delete the entire playlist directory
+    fs.rmSync(playlistPath, { recursive: true, force: true });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete playlist:', error);
+    throw error;
+  }
+});

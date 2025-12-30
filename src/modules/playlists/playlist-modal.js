@@ -59,12 +59,21 @@ async function createPlaylist() {
   const playlistNameInput = document.getElementById('playlist-name-input');
   const playlistName = playlistNameInput.value.trim();
   
-  if (!playlistName) return;
+  console.log('Creating playlist:', playlistName);
+  
+  if (!playlistName) {
+    console.log('No playlist name provided');
+    return;
+  }
   
   try {
-    await window.electronAPI.createPlaylist(playlistName);
+    console.log('Calling electronAPI.createPlaylist...');
+    const result = await window.electronAPI.createPlaylist(playlistName);
+    console.log('Playlist created:', result);
+    
     hidePlaylistModal();
     await loadPlaylists();
+    console.log('Playlists reloaded');
   } catch (error) {
     console.error('Failed to create playlist:', error);
     alert('Failed to create playlist: ' + error.message);
