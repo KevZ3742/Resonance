@@ -208,3 +208,28 @@ export function registerPlaylistHandlers() {
     }
   });
 }
+
+// Handle renaming a playlist
+ipcMain.handle('rename-playlist', async (event, oldName, newName) => {
+  try {
+    const playlistsPath = getPlaylistsPath();
+    const oldPath = path.join(playlistsPath, oldName);
+    const newPath = path.join(playlistsPath, newName);
+    
+    if (!fs.existsSync(oldPath)) {
+      throw new Error('Playlist does not exist');
+    }
+    
+    if (fs.existsSync(newPath)) {
+      throw new Error('A playlist with this name already exists');
+    }
+    
+    // Rename the directory
+    fs.renameSync(oldPath, newPath);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to rename playlist:', error);
+    throw error;
+  }
+});

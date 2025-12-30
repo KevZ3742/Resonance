@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMetadata: () => ipcRenderer.invoke('get-metadata'),
   setMetadata: (metadata) => ipcRenderer.invoke('set-metadata', metadata),
   getMp3Duration: (filename) => ipcRenderer.invoke('get-mp3-duration', filename),
+  renamePlaylist: (oldName, newName) => ipcRenderer.invoke('rename-playlist', oldName, newName),
   onOpenPreferences: (callback) => {
     ipcRenderer.on('open-preferences', () => callback());
   },

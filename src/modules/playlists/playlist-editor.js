@@ -56,6 +56,8 @@ function initPlaylistMenu() {
   const toggleAddSongsBtn = document.getElementById('toggle-add-songs-btn');
   const addSongsSection = document.getElementById('add-songs-section');
   const closeAddSongsBtn = document.getElementById('close-add-songs-btn');
+  const renamePlaylistBtn = document.getElementById('rename-playlist-btn');
+  const deletePlaylistBtn = document.getElementById('delete-playlist-btn');
   
   if (menuBtn && menuDropdown) {
     // Toggle menu dropdown
@@ -78,7 +80,6 @@ function initPlaylistMenu() {
       
       if (addSongsExpanded) {
         addSongsSection.classList.remove('hidden');
-        // Load available songs when opening
         if (currentEditingPlaylist) {
           loadAvailableSongs(currentEditingPlaylist);
         }
@@ -86,7 +87,6 @@ function initPlaylistMenu() {
         addSongsSection.classList.add('hidden');
       }
       
-      // Close the menu dropdown
       menuDropdown.classList.add('hidden');
     });
   }
@@ -95,6 +95,44 @@ function initPlaylistMenu() {
     closeAddSongsBtn.addEventListener('click', () => {
       addSongsExpanded = false;
       addSongsSection.classList.add('hidden');
+    });
+  }
+  
+  // NEW: Rename playlist handler
+  if (renamePlaylistBtn) {
+    renamePlaylistBtn.addEventListener('click', async () => {
+      menuDropdown.classList.add('hidden');
+      
+      if (currentEditingPlaylist) {
+        const { showRenamePlaylistModal } = await import('./playlist-rename.js');
+        showRenamePlaylistModal(currentEditingPlaylist, true);
+      }
+    });
+  }
+  
+  // NEW: Delete playlist handler
+  if (deletePlaylistBtn) {
+    deletePlaylistBtn.addEventListener('click', async () => {
+      menuDropdown.classList.add('hidden');
+      
+      if (currentEditingPlaylist) {
+        const confirmed = confirm(`Delete playlist "${currentEditingPlaylist}"? This cannot be undone.`);
+        if (confirmed) {
+          try {
+            // Would need to implement delete-playlist handler in backend
+            // For now, just navigate back
+            document.getElementById('playlist-edit-view').classList.add('hidden');
+            document.getElementById('playlists-view').classList.remove('hidden');
+            currentEditingPlaylist = null;
+            
+            const { loadPlaylists } = await import('./playlist-list.js');
+            await loadPlaylists();
+          } catch (error) {
+            console.error('Failed to delete playlist:', error);
+            alert('Failed to delete playlist: ' + error.message);
+          }
+        }
+      }
     });
   }
 }

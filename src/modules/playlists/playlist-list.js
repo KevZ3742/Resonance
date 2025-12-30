@@ -76,11 +76,116 @@ async function loadPlaylistInfo(playlist) {
  */
 function attachPlaylistEventListeners() {
   document.querySelectorAll('.playlist-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const playlistName = item.getAttribute('data-playlist');
+    const playlistName = item.getAttribute('data-playlist');
+    
+    // Click handler
+    item.addEventListener('click', (e) => {
+      // Don't trigger if clicking on context menu trigger
+      if (e.target.closest('.playlist-context-menu-btn')) return;
       openPlaylistEditor(playlistName);
     });
+    
+    // Context menu handler
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showPlaylistContextMenu(e.clientX, e.clientY, playlistName);
+    });
   });
+}
+
+/**
+ * Show context menu for playlist
+ */
+function showPlaylistContextMenu(x, y, playlistName) {
+  // Remove existing context menu if any
+  const existingMenu = document.getElementById('playlist-context-menu');
+  if (existingMenu) {
+    existingMenu.remove();
+  }
+  
+  const contextMenu = document.createElement('div');
+  contextMenu.id = 'playlist-context-menu';
+  contextMenu.className = 'fixed bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 py-1 min-w-[180px]';
+  contextMenu.innerHTML = `
+    <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="open">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+      </svg>
+      Open
+    </button>
+    <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="rename">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+      </svg>
+      Rename
+    </button>
+    <div class="border-t border-neutral-700 my-1"></div>
+    <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2 text-red-400" data-action="delete">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+      </svg>
+      Delete
+    </button>
+  `;
+  
+  document.body.appendChild(contextMenu);
+  
+  // Position the menu
+  const menuRect = contextMenu.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  let left = x;
+  let top = y;
+  
+  if (x + menuRect.width > viewportWidth) {
+    left = x - menuRect.width;
+  }
+  
+  if (y + menuRect.height > viewportHeight) {
+    top = y - menuRect.height;
+  }
+  
+  contextMenu.style.left = `${left}px`;
+  contextMenu.style.top = `${top}px`;
+  
+  // Handle menu actions
+  contextMenu.addEventListener('click', async (e) => {
+    const action = e.target.closest('.playlist-context-item')?.getAttribute('data-action');
+    if (!action) return;
+    
+    contextMenu.remove();
+    
+    if (action === 'open') {
+      openPlaylistEditor(playlistName);
+    } else if (action === 'rename') {
+      const { showRenamePlaylistModal } = await import('./playlist-rename.js');
+      showRenamePlaylistModal(playlistName, false);
+    } else if (action === 'delete') {
+      const confirmed = confirm(`Delete playlist "${playlistName}"? This cannot be undone.`);
+      if (confirmed) {
+        try {
+          await window.electronAPI.deletePlaylist(playlistName);
+          await loadPlaylists();
+        } catch (error) {
+          console.error('Failed to delete playlist:', error);
+          alert('Failed to delete playlist: ' + error.message);
+        }
+      }
+    }
+  });
+  
+  // Close menu when clicking outside
+  const closeMenu = (e) => {
+    if (!contextMenu.contains(e.target)) {
+      contextMenu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
 }
 
 /**
