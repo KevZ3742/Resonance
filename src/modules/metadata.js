@@ -1,3 +1,5 @@
+import { formatDuration } from '../utils/formatters.js';
+
 /**
  * Metadata manager for songs
  */
@@ -110,6 +112,9 @@ class MetadataManager {
 
 // Create singleton instance
 export const metadataManager = new MetadataManager();
+
+// Export formatDuration for backward compatibility
+export { formatDuration };
 
 /**
  * Show metadata editor modal
@@ -232,16 +237,4 @@ export function showMetadataEditor(filename, onSave) {
       }
     });
   }
-}
-
-/**
- * Format duration helper
- * @param {number} seconds - Duration in seconds
- * @returns {string} Formatted duration
- */
-export function formatDuration(seconds) {
-  if (!seconds && seconds !== 0) return '';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }

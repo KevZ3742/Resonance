@@ -1,8 +1,10 @@
+import { formatDuration } from '../utils/formatters.js';
+
 let isPlaying = false;
 let currentSong = null;
 let audioElement = null;
-let previousVolume = 0.7; // Store volume before mute
-let wasPlayingBeforeScrub = false; // Track if music was playing before scrubbing
+let previousVolume = 0.7;
+let wasPlayingBeforeScrub = false;
 
 /**
  * Initialize music player controls
@@ -34,7 +36,7 @@ function createAudioElement() {
     }
     
     if (currentTimeEl) {
-      currentTimeEl.textContent = formatTime(audioElement.currentTime);
+      currentTimeEl.textContent = formatDuration(audioElement.currentTime);
     }
   });
   
@@ -42,7 +44,7 @@ function createAudioElement() {
   audioElement.addEventListener('loadedmetadata', () => {
     const totalTimeEl = document.getElementById('total-time');
     if (totalTimeEl && audioElement.duration) {
-      totalTimeEl.textContent = formatTime(audioElement.duration);
+      totalTimeEl.textContent = formatDuration(audioElement.duration);
     }
   });
   
@@ -58,18 +60,6 @@ function createAudioElement() {
   // Set default volume
   audioElement.volume = 0.7;
   previousVolume = 0.7;
-}
-
-/**
- * Format time in seconds to MM:SS format
- * @param {number} seconds - Time in seconds
- * @returns {string} Formatted time string
- */
-function formatTime(seconds) {
-  if (!seconds || isNaN(seconds)) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -326,7 +316,7 @@ function updateProgressFromMouse(e, progressBar) {
   // Update current time display
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) {
-    currentTimeEl.textContent = formatTime(newTime);
+    currentTimeEl.textContent = formatDuration(newTime);
   }
 }
 
