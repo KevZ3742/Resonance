@@ -47,9 +47,12 @@ function createAudioElement() {
   });
   
   // Handle when song ends
-  audioElement.addEventListener('ended', () => {
+  audioElement.addEventListener('ended', async () => {
     setPlayingState(false);
-    // TODO: Auto-play next song in queue
+    // Auto-play next song in queue
+    if (window.queueManager) {
+      await window.queueManager.playNext();
+    }
   });
   
   // Set default volume
@@ -92,20 +95,28 @@ function initPlayPauseButton() {
 }
 
 /**
- * Initialize previous/next buttons
+ * Initialize previous/next buttons with queue integration
  */
 function initNavigationButtons() {
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
 
-  prevBtn.addEventListener('click', () => {
-    console.log('Previous track');
-    // TODO: Implement previous track functionality
+  prevBtn.addEventListener('click', async () => {
+    // Try to play previous in queue
+    if (window.queueManager) {
+      await window.queueManager.playPrevious();
+    } else {
+      console.log('No queue manager available');
+    }
   });
 
-  nextBtn.addEventListener('click', () => {
-    console.log('Next track');
-    // TODO: Implement next track functionality
+  nextBtn.addEventListener('click', async () => {
+    // Try to play next in queue
+    if (window.queueManager) {
+      await window.queueManager.playNext();
+    } else {
+      console.log('No queue manager available');
+    }
   });
 }
 

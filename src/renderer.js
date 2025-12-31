@@ -1,4 +1,4 @@
-// src/renderer.js - Updated main renderer entry point
+// src/renderer.js - Main renderer entry point
 
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
@@ -8,6 +8,7 @@ import { initDownload } from './modules/download.js';
 import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists/index.js';
 import { initPreferences } from './modules/preferences.js';
 import { metadataManager } from './modules/metadata.js';
+import { queueManager } from './modules/queue.js';
 
 /**
  * Initialize the application
@@ -15,6 +16,9 @@ import { metadataManager } from './modules/metadata.js';
 async function initApp() {
   // Initialize metadata manager first
   await metadataManager.loadMetadata();
+  
+  // Initialize queue manager and make it globally available
+  window.queueManager = queueManager;
   
   // Initialize main UI components
   initTabs();

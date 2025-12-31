@@ -203,7 +203,7 @@ function reorderSongs(songs, savedOrder) {
 function createPlaylistSongElement(song, index) {
   const metadata = metadataManager.getMetadata(song);
   return `
-    <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition cursor-pointer" data-song="${song}" data-index="${index}" draggable="true">
+    <div class="playlist-song-item bg-neutral-700 hover:bg-neutral-600 p-3 rounded-lg transition group" data-song="${song}" data-index="${index}" draggable="true">
       <div class="flex items-center gap-3">
         <div class="drag-handle cursor-move text-neutral-500 hover:text-neutral-300">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -214,6 +214,18 @@ function createPlaylistSongElement(song, index) {
           <div class="font-medium truncate">${metadata.title}</div>
           <div class="text-sm text-neutral-400 truncate">${metadata.artist}</div>
           ${metadata.duration ? `<div class="text-xs text-neutral-500">${formatDuration(metadata.duration)}</div>` : ''}
+        </div>
+        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button class="play-song-btn p-2 hover:bg-neutral-500 rounded-lg transition" data-song="${song}" title="Play Now">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
+          <button class="add-to-queue-btn p-2 hover:bg-neutral-500 rounded-lg transition" data-song="${song}" title="Add to Queue">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -227,29 +239,59 @@ function attachPlaylistSongEventListeners(playlistName) {
   const items = document.querySelectorAll('.playlist-song-item');
   console.log('Attaching event listeners to', items.length, 'playlist items');
   
+  // Play buttons
+  document.querySelectorAll('.play-song-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const songName = btn.getAttribute('data-song');
+      const metadata = metadataManager.getMetadata(songName);
+      
+      // Import queueManager
+      const { queueManager } = await import('../queue.js');
+      await queueManager.playNow(songName, metadata);
+    });
+  });
+
+  // Add to queue buttons
+  document.querySelectorAll('.add-to-queue-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const songName = btn.getAttribute('data-song');
+      const metadata = metadataManager.getMetadata(songName);
+      
+      // Import queueManager
+      const { queueManager } = await import('../queue.js');
+      queueManager.addToQueue(songName, metadata);
+      showNotification(`Added "${metadata.title}" to queue`);
+    });
+  });
+  
+  // Context menu handler
   items.forEach(item => {
     const songName = item.getAttribute('data-song');
     
-    // Remove old listeners by cloning
-    const newItem = item.cloneNode(true);
-    item.parentNode.replaceChild(newItem, item);
-    
-    // Click handler
-    newItem.addEventListener('click', async (e) => {
-      if (e.target.closest('.drag-handle')) return;
-      
-      const metadata = metadataManager.getMetadata(songName);
-      await playSong(songName, metadata);
-    });
-    
-    // Context menu handler
-    newItem.addEventListener('contextmenu', (e) => {
+    item.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
       console.log('Right-click on song:', songName, 'in playlist:', playlistName);
       showContextMenu(e.clientX, e.clientY, songName, playlistName);
     });
   });
+}
+
+/**
+ * Show temporary notification
+ */
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 shadow-lg z-50 transition-opacity';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
 }
 
 /**
