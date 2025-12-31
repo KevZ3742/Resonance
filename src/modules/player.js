@@ -6,6 +6,7 @@ let audioElement = null;
 let previousVolume = 0.7;
 let wasPlayingBeforeScrub = false;
 let loopMode = 'none'; // 'none', 'one', 'all'
+let loopOneCount = 0; // Track how many times current song has looped in 'one' mode
 let playbackSpeed = 1.0;
 
 // Audio context and nodes for equalizer
@@ -65,11 +66,27 @@ function createAudioElement() {
   // Handle when song ends
   audioElement.addEventListener('ended', async () => {
     if (loopMode === 'one') {
-      // Loop current song
+      // Loop once: play one more time then continue to next
+      if (loopOneCount === 0) {
+        loopOneCount = 1;
+        audioElement.currentTime = 0;
+        audioElement.play();
+      } else {
+        // Already looped once, reset counter, turn off loop mode, and play next
+        loopOneCount = 0;
+        loopMode = 'none';
+        updateLoopButtonDisplay();
+        setPlayingState(false);
+        if (window.queueManager) {
+          await window.queueManager.playNext();
+        }
+      }
+    } else if (loopMode === 'all') {
+      // Infinite loop: keep looping the current song
       audioElement.currentTime = 0;
       audioElement.play();
-    } else if (loopMode === 'all' || loopMode === 'none') {
-      // Let queue manager handle it
+    } else {
+      // No loop: continue to next song in queue
       setPlayingState(false);
       if (window.queueManager) {
         await window.queueManager.playNext();
@@ -179,6 +196,9 @@ function initNavigationButtons() {
       return;
     }
     
+    // Reset loop one counter when manually changing songs
+    loopOneCount = 0;
+    
     if (window.queueManager) {
       await window.queueManager.playPrevious();
     }
@@ -188,6 +208,9 @@ function initNavigationButtons() {
     if (!window.queueManager || window.queueManager.getQueue().length === 0) {
       return;
     }
+    
+    // Reset loop one counter when manually changing songs
+    loopOneCount = 0;
     
     if (window.queueManager) {
       await window.queueManager.playNext();
@@ -334,48 +357,57 @@ function initProgressBar() {
 }
 
 /**
+ * Update loop button display
+ */
+function updateLoopButtonDisplay() {
+  const loopBtn = document.getElementById('loop-btn');
+  if (!loopBtn) return;
+  
+  const icon = loopBtn.querySelector('svg');
+  
+  if (loopMode === 'none') {
+    // No loop - gray icon
+    icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
+    loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
+    loopBtn.classList.add('text-neutral-400');
+    loopBtn.title = 'Loop Mode: Off';
+  } else if (loopMode === 'all') {
+    // Loop all (infinite) - blue icon
+    icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
+    loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
+    loopBtn.classList.add('text-blue-400');
+    loopBtn.title = 'Loop Mode: Infinite (Current Song)';
+  } else if (loopMode === 'one') {
+    // Loop one - blue icon with "1" badge
+    icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><circle cx="12" cy="12" r="4" fill="currentColor"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" fill="var(--background)" font-size="6" font-weight="bold">1</text>';
+    loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
+    loopBtn.classList.add('text-blue-400');
+    loopBtn.title = 'Loop Mode: Once (Play Twice)';
+  }
+}
+
+/**
  * Initialize loop control
  */
 function initLoopControl() {
   const loopBtn = document.getElementById('loop-btn');
   if (!loopBtn) return;
   
-  const updateLoopIcon = () => {
-    const icon = loopBtn.querySelector('svg');
-    
-    if (loopMode === 'none') {
-      // No loop - gray icon
-      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
-      loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
-      loopBtn.classList.add('text-neutral-400');
-      loopBtn.title = 'Loop Mode: Off';
-    } else if (loopMode === 'all') {
-      // Loop all - blue icon
-      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
-      loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
-      loopBtn.classList.add('text-blue-400');
-      loopBtn.title = 'Loop Mode: All';
-    } else if (loopMode === 'one') {
-      // Loop one - blue icon with "1" badge
-      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><circle cx="12" cy="12" r="4" fill="currentColor"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" fill="var(--background)" font-size="6" font-weight="bold">1</text>';
-      loopBtn.classList.remove('text-neutral-400', 'text-blue-400');
-      loopBtn.classList.add('text-blue-400');
-      loopBtn.title = 'Loop Mode: One';
-    }
-  };
-  
   loopBtn.addEventListener('click', () => {
+    // Cycle through modes: none -> all -> one -> none
     if (loopMode === 'none') {
       loopMode = 'all';
     } else if (loopMode === 'all') {
       loopMode = 'one';
+      loopOneCount = 0; // Reset counter when entering 'one' mode
     } else {
       loopMode = 'none';
+      loopOneCount = 0; // Reset counter when exiting loop modes
     }
-    updateLoopIcon();
+    updateLoopButtonDisplay();
   });
   
-  updateLoopIcon();
+  updateLoopButtonDisplay();
 }
 
 /**
@@ -527,6 +559,9 @@ function updateProgressFromMouse(e, progressBar) {
  */
 export async function playSong(songFilename, metadata = {}) {
   try {
+    // Reset loop one counter when playing a new song
+    loopOneCount = 0;
+    
     const arrayBuffer = await window.electronAPI.readSongFile(songFilename);
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
     const blobUrl = URL.createObjectURL(blob);
@@ -605,6 +640,7 @@ export function clearPlayer() {
   }
   
   currentSong = null;
+  loopOneCount = 0; // Reset loop counter when clearing
   setPlayingState(false);
   
   const songTitle = document.getElementById('song-title');
