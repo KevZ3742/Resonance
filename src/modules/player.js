@@ -5,6 +5,17 @@ let currentSong = null;
 let audioElement = null;
 let previousVolume = 0.7;
 let wasPlayingBeforeScrub = false;
+let loopMode = 'none'; // 'none', 'one', 'all'
+let playbackSpeed = 1.0;
+
+// Audio context and nodes for equalizer
+let audioContext = null;
+let sourceNode = null;
+let gainNode = null;
+let eqBands = [];
+
+// EQ frequencies (standard 10-band equalizer)
+const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 /**
  * Initialize music player controls
@@ -15,6 +26,9 @@ export function initPlayer() {
   initNavigationButtons();
   initVolumeControl();
   initProgressBar();
+  initLoopControl();
+  initPlaybackSpeedControl();
+  initEqualizer();
 }
 
 /**
@@ -50,16 +64,78 @@ function createAudioElement() {
   
   // Handle when song ends
   audioElement.addEventListener('ended', async () => {
-    setPlayingState(false);
-    // Auto-play next song in queue
-    if (window.queueManager) {
-      await window.queueManager.playNext();
+    if (loopMode === 'one') {
+      // Loop current song
+      audioElement.currentTime = 0;
+      audioElement.play();
+    } else if (loopMode === 'all' || loopMode === 'none') {
+      // Let queue manager handle it
+      setPlayingState(false);
+      if (window.queueManager) {
+        await window.queueManager.playNext();
+      }
     }
   });
   
-  // Set default volume
+  // Set default volume and playback rate
   audioElement.volume = 0.7;
+  audioElement.playbackRate = 1.0;
   previousVolume = 0.7;
+  
+  // Initialize audio context for equalizer
+  initAudioContext();
+}
+
+/**
+ * Initialize audio context and equalizer nodes
+ */
+function initAudioContext() {
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Create gain node for master volume
+    gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
+    
+    // Create EQ bands (biquad filters)
+    let previousNode = gainNode;
+    
+    for (let i = EQ_FREQUENCIES.length - 1; i >= 0; i--) {
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'peaking';
+      filter.frequency.value = EQ_FREQUENCIES[i];
+      filter.Q.value = 1.0;
+      filter.gain.value = 0;
+      
+      filter.connect(previousNode);
+      eqBands.unshift(filter);
+      previousNode = filter;
+    }
+  } catch (error) {
+    console.error('Failed to initialize audio context:', error);
+  }
+}
+
+/**
+ * Connect audio element to equalizer
+ */
+function connectAudioToEqualizer() {
+  if (!audioContext || !audioElement) return;
+  
+  // Resume audio context if suspended (browser autoplay policy)
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+  
+  // Only create source once per audio element
+  if (!sourceNode) {
+    try {
+      sourceNode = audioContext.createMediaElementSource(audioElement);
+      sourceNode.connect(eqBands[0]);
+    } catch (error) {
+      console.error('Failed to connect audio to equalizer:', error);
+    }
+  }
 }
 
 /**
@@ -69,15 +145,11 @@ function initPlayPauseButton() {
   const playPauseBtn = document.getElementById('play-pause-btn');
 
   playPauseBtn.addEventListener('click', () => {
-    // Check if queue has songs
     if (!window.queueManager || window.queueManager.getQueue().length === 0) {
-      console.log('Queue is empty - cannot play');
       return;
     }
     
-    // Check if there's a current song loaded
     if (!currentSong || !audioElement.src) {
-      // Try to play the first song in queue
       if (window.queueManager.getCurrentIndex() === -1 && window.queueManager.getQueue().length > 0) {
         const firstSong = window.queueManager.getQueue()[0];
         window.queueManager.playNow(firstSong.filename, firstSong.metadata);
@@ -96,33 +168,27 @@ function initPlayPauseButton() {
 }
 
 /**
- * Initialize previous/next buttons with queue integration
+ * Initialize previous/next buttons
  */
 function initNavigationButtons() {
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
 
   prevBtn.addEventListener('click', async () => {
-    // Check if queue has songs
     if (!window.queueManager || window.queueManager.getQueue().length === 0) {
-      console.log('Queue is empty - cannot go to previous');
       return;
     }
     
-    // Try to play previous in queue
     if (window.queueManager) {
       await window.queueManager.playPrevious();
     }
   });
 
   nextBtn.addEventListener('click', async () => {
-    // Check if queue has songs
     if (!window.queueManager || window.queueManager.getQueue().length === 0) {
-      console.log('Queue is empty - cannot go to next');
       return;
     }
     
-    // Try to play next in queue
     if (window.queueManager) {
       await window.queueManager.playNext();
     }
@@ -142,12 +208,10 @@ function initVolumeControl() {
 
   let hideTimeout;
 
-  // Update volume percentage display and slider fill
   const updateVolumeDisplay = (value) => {
     volumePercentage.textContent = `${value}%`;
     volumeSlider.style.setProperty('--volume-fill', `${value}%`);
     
-    // Update icon based on volume level
     if (value === 0) {
       volumeIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
     } else if (value < 50) {
@@ -157,7 +221,6 @@ function initVolumeControl() {
     }
   };
 
-  // Volume slider input handler
   volumeSlider.addEventListener('input', (e) => {
     const value = e.target.value;
     if (audioElement) {
@@ -169,15 +232,12 @@ function initVolumeControl() {
     updateVolumeDisplay(value);
   });
 
-  // Volume button click handler - toggle mute
   volumeBtn.addEventListener('click', () => {
     if (audioElement.volume === 0) {
-      // Unmute - restore previous volume
       audioElement.volume = previousVolume;
       volumeSlider.value = previousVolume * 100;
       updateVolumeDisplay(previousVolume * 100);
     } else {
-      // Mute - save current volume and set to 0
       previousVolume = audioElement.volume;
       audioElement.volume = 0;
       volumeSlider.value = 0;
@@ -185,23 +245,18 @@ function initVolumeControl() {
     }
   });
 
-  // Initialize display
   updateVolumeDisplay(volumeSlider.value);
 
-  // Show slider when hovering over the volume container
   volumeContainer.addEventListener('mouseenter', () => {
     clearTimeout(hideTimeout);
     sliderContainer.classList.remove('hidden');
   });
 
-  // Hide slider with a small delay when mouse leaves
   volumeContainer.addEventListener('mouseleave', (e) => {
-    // Check if mouse is moving to the slider
     const sliderRect = sliderContainer.getBoundingClientRect();
     const mouseY = e.clientY;
     const mouseX = e.clientX;
     
-    // If mouse is near the slider area, don't hide immediately
     if (mouseY < sliderRect.bottom && mouseY > sliderRect.top - 20 &&
         mouseX > sliderRect.left && mouseX < sliderRect.right) {
       return;
@@ -212,13 +267,11 @@ function initVolumeControl() {
     }, 100);
   });
   
-  // Keep slider visible when hovering over it
   sliderContainer.addEventListener('mouseenter', () => {
     clearTimeout(hideTimeout);
     sliderContainer.classList.remove('hidden');
   });
   
-  // Hide slider when leaving the slider itself
   sliderContainer.addEventListener('mouseleave', () => {
     hideTimeout = setTimeout(() => {
       sliderContainer.classList.add('hidden');
@@ -234,14 +287,9 @@ function initProgressBar() {
   const progress = document.getElementById('progress');
   let isDragging = false;
 
-  // Handle clicking on progress bar
   progressBar.addEventListener('click', (e) => {
     if (!audioElement || !audioElement.duration) return;
-    
-    // Check if queue has songs
-    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
-      return;
-    }
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) return;
     
     const rect = progressBar.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
@@ -251,19 +299,12 @@ function initProgressBar() {
     progress.style.width = `${percent * 100}%`;
   });
   
-  // Handle dragging progress bar
   progressBar.addEventListener('mousedown', (e) => {
     if (!audioElement || !audioElement.duration) return;
-    
-    // Check if queue has songs
-    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
-      return;
-    }
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) return;
     
     isDragging = true;
     progressBar.classList.add('dragging');
-    
-    // Pause if currently playing
     wasPlayingBeforeScrub = !audioElement.paused;
     if (wasPlayingBeforeScrub) {
       audioElement.pause();
@@ -284,7 +325,6 @@ function initProgressBar() {
       isDragging = false;
       progressBar.classList.remove('dragging');
       
-      // Resume playback if it was playing before scrubbing
       if (wasPlayingBeforeScrub) {
         audioElement.play();
         wasPlayingBeforeScrub = false;
@@ -294,16 +334,147 @@ function initProgressBar() {
 }
 
 /**
- * Update progress bar from mouse position
- * @param {MouseEvent} e - Mouse event
- * @param {HTMLElement} progressBar - Progress bar element
+ * Initialize loop control
+ */
+function initLoopControl() {
+  const loopBtn = document.getElementById('loop-btn');
+  if (!loopBtn) return;
+  
+  const updateLoopIcon = () => {
+    const icon = loopBtn.querySelector('svg');
+    
+    if (loopMode === 'none') {
+      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
+      loopBtn.classList.remove('text-blue-400');
+      loopBtn.classList.add('text-neutral-400');
+    } else if (loopMode === 'all') {
+      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>';
+      loopBtn.classList.remove('text-neutral-400');
+      loopBtn.classList.add('text-blue-400');
+    } else if (loopMode === 'one') {
+      icon.innerHTML = '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-3-5h-1v3h1v-3z"/>';
+      loopBtn.classList.remove('text-neutral-400');
+      loopBtn.classList.add('text-blue-400');
+    }
+  };
+  
+  loopBtn.addEventListener('click', () => {
+    if (loopMode === 'none') {
+      loopMode = 'all';
+    } else if (loopMode === 'all') {
+      loopMode = 'one';
+    } else {
+      loopMode = 'none';
+    }
+    updateLoopIcon();
+  });
+  
+  updateLoopIcon();
+}
+
+/**
+ * Initialize playback speed control
+ */
+function initPlaybackSpeedControl() {
+  const speedBtn = document.getElementById('speed-btn');
+  if (!speedBtn) return;
+  
+  const speedOptions = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+  let currentSpeedIndex = 3; // Start at 1.0x
+  
+  const updateSpeedDisplay = () => {
+    speedBtn.textContent = `${playbackSpeed}x`;
+    if (audioElement) {
+      audioElement.playbackRate = playbackSpeed;
+    }
+  };
+  
+  speedBtn.addEventListener('click', () => {
+    currentSpeedIndex = (currentSpeedIndex + 1) % speedOptions.length;
+    playbackSpeed = speedOptions[currentSpeedIndex];
+    updateSpeedDisplay();
+  });
+  
+  updateSpeedDisplay();
+}
+
+/**
+ * Initialize equalizer UI
+ */
+function initEqualizer() {
+  const eqBtn = document.getElementById('eq-btn');
+  const eqPanel = document.getElementById('eq-panel');
+  if (!eqBtn || !eqPanel) return;
+  
+  let isEqOpen = false;
+  
+  eqBtn.addEventListener('click', () => {
+    isEqOpen = !isEqOpen;
+    eqPanel.classList.toggle('hidden', !isEqOpen);
+  });
+  
+  // Close EQ panel when clicking outside
+  document.addEventListener('click', (e) => {
+    if (isEqOpen && !eqBtn.contains(e.target) && !eqPanel.contains(e.target)) {
+      isEqOpen = false;
+      eqPanel.classList.add('hidden');
+    }
+  });
+  
+  // Create EQ sliders
+  const eqSliders = document.getElementById('eq-sliders');
+  if (eqSliders) {
+    EQ_FREQUENCIES.forEach((freq, index) => {
+      const slider = document.createElement('div');
+      slider.className = 'flex flex-col items-center gap-2';
+      slider.innerHTML = `
+        <input 
+          type="range" 
+          min="-12" 
+          max="12" 
+          value="0" 
+          step="1"
+          class="eq-slider"
+          data-band="${index}"
+          orient="vertical"
+        >
+        <span class="text-xs text-neutral-400">${freq < 1000 ? freq : (freq/1000).toFixed(1) + 'k'}</span>
+      `;
+      eqSliders.appendChild(slider);
+      
+      const input = slider.querySelector('input');
+      input.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        if (eqBands[index]) {
+          eqBands[index].gain.value = value;
+        }
+      });
+    });
+  }
+  
+  // Reset EQ button
+  const resetEqBtn = document.getElementById('reset-eq-btn');
+  if (resetEqBtn) {
+    resetEqBtn.addEventListener('click', () => {
+      document.querySelectorAll('.eq-slider').forEach((slider, index) => {
+        slider.value = 0;
+        if (eqBands[index]) {
+          eqBands[index].gain.value = 0;
+        }
+      });
+    });
+  }
+}
+
+/**
+ * Update progress from mouse position
  */
 function updateProgressFromMouse(e, progressBar) {
   if (!audioElement || !audioElement.duration) return;
   
   const rect = progressBar.getBoundingClientRect();
   let percent = (e.clientX - rect.left) / rect.width;
-  percent = Math.max(0, Math.min(1, percent)); // Clamp between 0 and 1
+  percent = Math.max(0, Math.min(1, percent));
   
   const newTime = percent * audioElement.duration;
   audioElement.currentTime = newTime;
@@ -313,7 +484,6 @@ function updateProgressFromMouse(e, progressBar) {
     progress.style.width = `${percent * 100}%`;
   }
   
-  // Update current time display
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) {
     currentTimeEl.textContent = formatDuration(newTime);
@@ -322,33 +492,23 @@ function updateProgressFromMouse(e, progressBar) {
 
 /**
  * Play a song by filename
- * @param {string} songFilename - Name of the song file
- * @param {Object} metadata - Song metadata (title, artist, etc.)
  */
 export async function playSong(songFilename, metadata = {}) {
   try {
-    console.log('Attempting to play song:', songFilename);
-    
-    // Read the audio file as a buffer
     const arrayBuffer = await window.electronAPI.readSongFile(songFilename);
-    console.log('Got audio buffer, size:', arrayBuffer.byteLength);
-    
-    // Create a blob from the buffer
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
     const blobUrl = URL.createObjectURL(blob);
     
-    console.log('Created blob URL for playback');
-    
-    // Revoke previous blob URL if exists to free memory
     if (audioElement.src && audioElement.src.startsWith('blob:')) {
       URL.revokeObjectURL(audioElement.src);
     }
     
-    // Load and play the song
     audioElement.src = blobUrl;
     audioElement.load();
     
-    // Update UI with song info
+    // Connect to equalizer on first play
+    connectAudioToEqualizer();
+    
     const songTitle = document.getElementById('song-title');
     const songArtist = document.getElementById('song-artist');
     
@@ -360,14 +520,11 @@ export async function playSong(songFilename, metadata = {}) {
       songArtist.textContent = metadata.artist || 'Unknown Artist';
     }
     
-    // Store current song
     currentSong = songFilename;
     
-    // Auto-play the song
     try {
       await audioElement.play();
       setPlayingState(true);
-      console.log('Successfully playing:', songFilename);
     } catch (playError) {
       console.error('Error during playback:', playError);
       setPlayingState(false);
@@ -380,7 +537,6 @@ export async function playSong(songFilename, metadata = {}) {
 
 /**
  * Get current playing state
- * @returns {boolean} Whether music is currently playing
  */
 export function getPlayingState() {
   return isPlaying;
@@ -388,7 +544,6 @@ export function getPlayingState() {
 
 /**
  * Set playing state
- * @param {boolean} playing - New playing state
  */
 export function setPlayingState(playing) {
   isPlaying = playing;
@@ -405,10 +560,9 @@ export function setPlayingState(playing) {
 }
 
 /**
- * Clear the player (stop playback and reset UI)
+ * Clear the player
  */
 export function clearPlayer() {
-  // Stop and clear audio
   if (audioElement) {
     audioElement.pause();
     audioElement.currentTime = 0;
@@ -418,34 +572,18 @@ export function clearPlayer() {
     audioElement.src = '';
   }
   
-  // Reset state
   currentSong = null;
   setPlayingState(false);
   
-  // Reset UI
   const songTitle = document.getElementById('song-title');
   const songArtist = document.getElementById('song-artist');
   const progress = document.getElementById('progress');
   const currentTimeEl = document.getElementById('current-time');
   const totalTimeEl = document.getElementById('total-time');
   
-  if (songTitle) {
-    songTitle.textContent = 'No Song Playing';
-  }
-  
-  if (songArtist) {
-    songArtist.textContent = 'Unknown Artist';
-  }
-  
-  if (progress) {
-    progress.style.width = '0%';
-  }
-  
-  if (currentTimeEl) {
-    currentTimeEl.textContent = '0:00';
-  }
-  
-  if (totalTimeEl) {
-    totalTimeEl.textContent = '0:00';
-  }
+  if (songTitle) songTitle.textContent = 'No Song Playing';
+  if (songArtist) songArtist.textContent = 'Unknown Artist';
+  if (progress) progress.style.width = '0%';
+  if (currentTimeEl) currentTimeEl.textContent = '0:00';
+  if (totalTimeEl) totalTimeEl.textContent = '0:00';
 }

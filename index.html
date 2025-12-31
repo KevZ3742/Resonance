@@ -103,33 +103,42 @@
                   </svg>
                 </button>
                 <h2 class="text-xl font-bold flex-1" id="playlist-edit-title">Playlist Name</h2>
-                
+
                 <!-- Menu button -->
                 <div class="relative">
-                  <button class="text-neutral-400 hover:text-white transition p-2 rounded-lg hover:bg-neutral-700" id="playlist-menu-btn">
+                  <button class="text-neutral-400 hover:text-white transition p-2 rounded-lg hover:bg-neutral-700"
+                    id="playlist-menu-btn">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                      <path
+                        d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                     </svg>
                   </button>
-                  
+
                   <!-- Dropdown menu -->
-                  <div class="hidden absolute right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 min-w-45" id="playlist-menu-dropdown">
-                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" id="toggle-add-songs-btn">
+                  <div
+                    class="hidden absolute right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 min-w-45"
+                    id="playlist-menu-dropdown">
+                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2"
+                      id="toggle-add-songs-btn">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                       </svg>
                       Add Songs
                     </button>
-                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" id="rename-playlist-btn">
+                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2"
+                      id="rename-playlist-btn">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        <path
+                          d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                       </svg>
                       Rename
                     </button>
                     <div class="border-t border-neutral-700 my-1"></div>
-                    <button class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2 text-red-400" id="delete-playlist-btn">
+                    <button
+                      class="w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2 text-red-400"
+                      id="delete-playlist-btn">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                       </svg>
                       Delete Playlist
                     </button>
@@ -144,11 +153,12 @@
                     <h3 class="text-sm font-semibold">Add Songs to Playlist</h3>
                     <button class="text-neutral-500 hover:text-neutral-300 transition" id="close-add-songs-btn">
                       <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        <path
+                          d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                       </svg>
                     </button>
                   </div>
-                  
+
                   <input type="text" placeholder="Search available songs..."
                     class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:border-blue-500 transition"
                     id="available-songs-search">
@@ -249,12 +259,13 @@
       </div>
     </div>
 
-    <!-- MP3 Controls Section - Full Width at Bottom -->
+    <!-- MP3 Controls Section -->
     <div class="bg-neutral-800 rounded-2xl overflow-visible">
       <!-- Control Buttons -->
       <div class="flex items-center justify-between p-6 pb-4 overflow-visible">
         <div class="w-1/3"></div>
 
+        <!-- Center controls -->
         <div class="flex items-center justify-center gap-6 w-1/3">
           <!-- Previous Button -->
           <button class="text-neutral-400 hover:text-white transition" id="prev-btn">
@@ -281,8 +292,49 @@
           </button>
         </div>
 
-        <!-- Volume Control with Hover -->
-        <div class="w-1/3 flex justify-end">
+        <!-- Right side - All controls together -->
+        <div class="w-1/3 flex justify-end gap-3">
+          <!-- Loop Button -->
+          <button class="text-neutral-400 hover:text-white transition p-2 rounded-2xl hover:bg-neutral-700/50"
+            id="loop-btn" title="Loop Mode">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+            </svg>
+          </button>
+
+          <!-- Playback Speed Button -->
+          <button
+            class="text-neutral-400 hover:text-white transition text-xs font-semibold px-3 py-2 rounded-2xl hover:bg-neutral-700/50"
+            id="speed-btn" title="Playback Speed">
+            1.0x
+          </button>
+
+          <!-- Equalizer Button -->
+          <div class="relative eq-container">
+            <button class="text-neutral-400 hover:text-white transition p-2 rounded-2xl hover:bg-neutral-700/50"
+              id="eq-btn" title="Equalizer">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z" />
+              </svg>
+            </button>
+
+            <!-- Equalizer Panel -->
+            <div class="hidden absolute bottom-full right-0 mb-3 z-50" id="eq-panel">
+              <div class="bg-neutral-800 rounded-2xl p-4 shadow-2xl border border-neutral-700 backdrop-blur-sm">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold">Equalizer</span>
+                    <button class="text-xs text-blue-400 hover:text-blue-300" id="reset-eq-btn">Reset</button>
+                  </div>
+                  <div class="flex items-center gap-3" id="eq-sliders">
+                    <!-- EQ sliders will be added by JavaScript -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Volume Control -->
           <div class="relative volume-container">
             <button
               class="text-neutral-400 hover:text-white transition-colors duration-200 p-2 rounded-2xl hover:bg-neutral-700/50"
@@ -292,7 +344,7 @@
               </svg>
             </button>
             <div
-              class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 hidden volume-slider-container z-50 transition-opacity duration-200">
+              class="absolute bottom-full right-0 mb-3 hidden volume-slider-container z-50 transition-opacity duration-200">
               <div class="bg-neutral-800 rounded-2xl p-4 shadow-2xl border border-neutral-700 backdrop-blur-sm">
                 <div class="flex flex-col items-center gap-3">
                   <span class="text-xs text-neutral-400 font-semibold tracking-wider w-10 text-center tabular-nums"
@@ -317,15 +369,16 @@
 
         <!-- Progress Bar Container -->
         <div class="relative group">
-          <div class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer transition-all duration-200 group-hover:h-2"
+          <div
+            class="w-full bg-neutral-700 rounded-full h-1.5 cursor-pointer transition-all duration-200 group-hover:h-2"
             id="progress-bar">
             <!-- Progress Fill with Thumb -->
             <div class="relative bg-blue-500 h-full rounded-full transition-none pointer-events-none" id="progress"
               style="width: 0%">
-                <!-- Thumb/Dot -->
-                <div class="absolute -right-1.5 top-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg translate-x-1/2 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:scale-110" 
-                  id="progress-thumb"></div>
-              </div>
+              <!-- Thumb/Dot -->
+              <div
+                class="absolute -right-1.5 top-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg translate-x-1/2 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:scale-110"
+                id="progress-thumb"></div>
             </div>
           </div>
         </div>
