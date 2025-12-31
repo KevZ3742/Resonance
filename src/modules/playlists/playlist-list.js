@@ -1,5 +1,9 @@
 import { loadPlaylistSongs, loadAvailableSongs, setCurrentEditingPlaylist } from './playlist-editor.js';
 import { calculateTotalDuration, formatTotalDuration } from './playlist-utils.js';
+import { metadataManager } from '../metadata.js';
+
+// Track shuffle state per playlist
+const playlistShuffleState = {};
 
 /**
  * Load all playlists
@@ -31,22 +35,42 @@ export async function loadPlaylists() {
  * Create playlist element HTML
  */
 function createPlaylistElement(playlist) {
+  const isShuffleOn = playlistShuffleState[playlist] || false;
   return `
-    <div class="bg-neutral-700 hover:bg-neutral-600 p-4 rounded-lg cursor-pointer transition flex justify-between items-center playlist-item" data-playlist="${playlist}">
-      <div class="flex items-center gap-3">
+    <div class="bg-neutral-700 hover:bg-neutral-600 p-4 rounded-lg transition playlist-item" data-playlist="${playlist}">
+      <div class="flex items-center gap-3 mb-3">
         <svg class="w-10 h-10 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
           <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
         </svg>
-        <div>
+        <div class="flex-1">
           <div class="font-medium text-lg">${playlist}</div>
           <div class="text-neutral-400 text-sm" id="playlist-${playlist}-info">Loading...</div>
         </div>
+        <button class="open-playlist-btn text-blue-400 hover:text-blue-300 p-2" title="Open Playlist">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </button>
       </div>
-      <button class="text-blue-400 hover:text-blue-300">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-        </svg>
-      </button>
+      <div class="flex gap-2">
+        <button class="play-playlist-btn flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded-lg transition flex items-center justify-center gap-2" data-playlist="${playlist}" title="Play Now">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <span class="text-sm font-medium">Play</span>
+        </button>
+        <button class="add-playlist-to-queue-btn flex-1 bg-neutral-600 hover:bg-neutral-500 text-white py-2 px-3 rounded-lg transition flex items-center justify-center gap-2" data-playlist="${playlist}" title="Add to Queue">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+          </svg>
+          <span class="text-sm font-medium">Add</span>
+        </button>
+        <button class="shuffle-playlist-btn ${isShuffleOn ? 'bg-blue-500 hover:bg-blue-600' : 'bg-neutral-600 hover:bg-neutral-500'} text-white py-2 px-3 rounded-lg transition" data-playlist="${playlist}" title="Toggle Shuffle">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+          </svg>
+        </button>
+      </div>
     </div>
   `;
 }
@@ -78,12 +102,41 @@ function attachPlaylistEventListeners() {
   document.querySelectorAll('.playlist-item').forEach(item => {
     const playlistName = item.getAttribute('data-playlist');
     
-    // Click handler
-    item.addEventListener('click', (e) => {
-      // Don't trigger if clicking on context menu trigger
-      if (e.target.closest('.playlist-context-menu-btn')) return;
-      openPlaylistEditor(playlistName);
-    });
+    // Open playlist handler
+    const openBtn = item.querySelector('.open-playlist-btn');
+    if (openBtn) {
+      openBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openPlaylistEditor(playlistName);
+      });
+    }
+    
+    // Play playlist handler
+    const playBtn = item.querySelector('.play-playlist-btn');
+    if (playBtn) {
+      playBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await playPlaylist(playlistName);
+      });
+    }
+    
+    // Add to queue handler
+    const addBtn = item.querySelector('.add-playlist-to-queue-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await addPlaylistToQueue(playlistName);
+      });
+    }
+    
+    // Shuffle toggle handler
+    const shuffleBtn = item.querySelector('.shuffle-playlist-btn');
+    if (shuffleBtn) {
+      shuffleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePlaylistShuffle(playlistName);
+      });
+    }
     
     // Context menu handler
     item.addEventListener('contextmenu', (e) => {
@@ -91,6 +144,138 @@ function attachPlaylistEventListeners() {
       showPlaylistContextMenu(e.clientX, e.clientY, playlistName);
     });
   });
+}
+
+/**
+ * Toggle shuffle state for playlist
+ */
+function togglePlaylistShuffle(playlistName) {
+  playlistShuffleState[playlistName] = !playlistShuffleState[playlistName];
+  
+  // Update button visual state
+  const shuffleBtn = document.querySelector(`.shuffle-playlist-btn[data-playlist="${playlistName}"]`);
+  if (shuffleBtn) {
+    if (playlistShuffleState[playlistName]) {
+      shuffleBtn.classList.remove('bg-neutral-600', 'hover:bg-neutral-500');
+      shuffleBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+    } else {
+      shuffleBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+      shuffleBtn.classList.add('bg-neutral-600', 'hover:bg-neutral-500');
+    }
+  }
+}
+
+/**
+ * Shuffle array in place
+ */
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
+ * Play entire playlist
+ */
+async function playPlaylist(playlistName) {
+  try {
+    let songs = await window.electronAPI.listPlaylistSongs(playlistName);
+    
+    if (songs.length === 0) {
+      showNotification('Playlist is empty');
+      return;
+    }
+    
+    // Get saved order
+    const savedOrder = await window.electronAPI.getPlaylistOrder(playlistName);
+    if (savedOrder && savedOrder.length > 0) {
+      songs = reorderSongs(songs, savedOrder);
+    }
+    
+    // Apply shuffle if enabled
+    if (playlistShuffleState[playlistName]) {
+      songs = shuffleArray(songs);
+    }
+    
+    // Clear current queue and add all songs with playlist grouping
+    if (window.queueManager) {
+      await window.queueManager.addPlaylistToQueue(playlistName, songs, true);
+      showNotification(`Playing "${playlistName}"`);
+    }
+  } catch (error) {
+    console.error('Failed to play playlist:', error);
+    showNotification('Failed to play playlist');
+  }
+}
+
+/**
+ * Add playlist to queue
+ */
+async function addPlaylistToQueue(playlistName) {
+  try {
+    let songs = await window.electronAPI.listPlaylistSongs(playlistName);
+    
+    if (songs.length === 0) {
+      showNotification('Playlist is empty');
+      return;
+    }
+    
+    // Get saved order
+    const savedOrder = await window.electronAPI.getPlaylistOrder(playlistName);
+    if (savedOrder && savedOrder.length > 0) {
+      songs = reorderSongs(songs, savedOrder);
+    }
+    
+    // Apply shuffle if enabled
+    if (playlistShuffleState[playlistName]) {
+      songs = shuffleArray(songs);
+    }
+    
+    // Add all songs with playlist grouping
+    if (window.queueManager) {
+      await window.queueManager.addPlaylistToQueue(playlistName, songs, false);
+      showNotification(`Added "${playlistName}" to queue`);
+    }
+  } catch (error) {
+    console.error('Failed to add playlist to queue:', error);
+    showNotification('Failed to add playlist to queue');
+  }
+}
+
+/**
+ * Reorder songs based on saved order
+ */
+function reorderSongs(songs, savedOrder) {
+  const orderedSongs = [];
+  for (const orderedSong of savedOrder) {
+    if (songs.includes(orderedSong)) {
+      orderedSongs.push(orderedSong);
+    }
+  }
+  for (const song of songs) {
+    if (!orderedSongs.includes(song)) {
+      orderedSongs.push(song);
+    }
+  }
+  return orderedSongs;
+}
+
+/**
+ * Show temporary notification
+ */
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 shadow-lg z-50 transition-opacity';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
 }
 
 /**
