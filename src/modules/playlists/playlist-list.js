@@ -292,6 +292,19 @@ function showPlaylistContextMenu(x, y, playlistName) {
   contextMenu.id = 'playlist-context-menu';
   contextMenu.className = 'fixed bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 py-1 min-w-[180px]';
   contextMenu.innerHTML = `
+    <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="play">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+      Play
+    </button>
+    <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="add-to-queue">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+      </svg>
+      Add to Queue
+    </button>
+    <div class="border-t border-neutral-700 my-1"></div>
     <button class="playlist-context-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition flex items-center gap-2" data-action="open">
       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
