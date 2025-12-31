@@ -70,35 +70,43 @@ function createSongElement(song) {
  * Attach event listeners to song items
  */
 function attachSongEventListeners() {
-  // Play buttons
-  document.querySelectorAll('.play-song-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+  const allSongsList = document.getElementById('all-songs-list');
+  
+  // Remove all old listeners by cloning and replacing
+  const newList = allSongsList.cloneNode(true);
+  allSongsList.parentNode.replaceChild(newList, allSongsList);
+  
+  // Use event delegation on the new list
+  newList.addEventListener('click', async (e) => {
+    const playBtn = e.target.closest('.play-song-btn');
+    const queueBtn = e.target.closest('.add-to-queue-btn');
+    
+    if (playBtn) {
       e.stopPropagation();
-      const songName = btn.getAttribute('data-song');
+      const songName = playBtn.getAttribute('data-song');
       const metadata = metadataManager.getMetadata(songName);
       await queueManager.playNow(songName, metadata);
-    });
-  });
-
-  // Add to queue buttons
-  document.querySelectorAll('.add-to-queue-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const songName = btn.getAttribute('data-song');
-      const metadata = metadataManager.getMetadata(songName);
-      queueManager.addToQueue(songName, metadata);
-      showNotification(`Added "${metadata.title}" to queue`);
-    });
-  });
-
-  // Context menu
-  document.querySelectorAll('.song-item').forEach(item => {
-    const songName = item.getAttribute('data-song');
+      return;
+    }
     
-    item.addEventListener('contextmenu', (e) => {
+    if (queueBtn) {
+      e.stopPropagation();
+      const songName = queueBtn.getAttribute('data-song');
+      const metadata = metadataManager.getMetadata(songName);
+      await queueManager.addToQueue(songName, metadata);
+      showNotification(`Added "${metadata.title}" to queue`);
+      return;
+    }
+  });
+
+  // Context menu using event delegation
+  newList.addEventListener('contextmenu', (e) => {
+    const item = e.target.closest('.song-item');
+    if (item) {
       e.preventDefault();
+      const songName = item.getAttribute('data-song');
       showContextMenu(e.clientX, e.clientY, songName);
-    });
+    }
   });
 }
 

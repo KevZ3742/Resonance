@@ -79,8 +79,19 @@ function initPlayPauseButton() {
   const playPauseBtn = document.getElementById('play-pause-btn');
 
   playPauseBtn.addEventListener('click', () => {
+    // Check if queue has songs
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
+      console.log('Queue is empty - cannot play');
+      return;
+    }
+    
+    // Check if there's a current song loaded
     if (!currentSong || !audioElement.src) {
-      console.log('No song loaded');
+      // Try to play the first song in queue
+      if (window.queueManager.getCurrentIndex() === -1 && window.queueManager.getQueue().length > 0) {
+        const firstSong = window.queueManager.getQueue()[0];
+        window.queueManager.playNow(firstSong.filename, firstSong.metadata);
+      }
       return;
     }
     
@@ -102,20 +113,28 @@ function initNavigationButtons() {
   const nextBtn = document.getElementById('next-btn');
 
   prevBtn.addEventListener('click', async () => {
+    // Check if queue has songs
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
+      console.log('Queue is empty - cannot go to previous');
+      return;
+    }
+    
     // Try to play previous in queue
     if (window.queueManager) {
       await window.queueManager.playPrevious();
-    } else {
-      console.log('No queue manager available');
     }
   });
 
   nextBtn.addEventListener('click', async () => {
+    // Check if queue has songs
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
+      console.log('Queue is empty - cannot go to next');
+      return;
+    }
+    
     // Try to play next in queue
     if (window.queueManager) {
       await window.queueManager.playNext();
-    } else {
-      console.log('No queue manager available');
     }
   });
 }
@@ -229,6 +248,11 @@ function initProgressBar() {
   progressBar.addEventListener('click', (e) => {
     if (!audioElement || !audioElement.duration) return;
     
+    // Check if queue has songs
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
+      return;
+    }
+    
     const rect = progressBar.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
     const newTime = percent * audioElement.duration;
@@ -240,6 +264,11 @@ function initProgressBar() {
   // Handle dragging progress bar
   progressBar.addEventListener('mousedown', (e) => {
     if (!audioElement || !audioElement.duration) return;
+    
+    // Check if queue has songs
+    if (!window.queueManager || window.queueManager.getQueue().length === 0) {
+      return;
+    }
     
     isDragging = true;
     progressBar.classList.add('dragging');
@@ -382,5 +411,51 @@ export function setPlayingState(playing) {
   } else {
     playIcon.classList.remove('hidden');
     pauseIcon.classList.add('hidden');
+  }
+}
+
+/**
+ * Clear the player (stop playback and reset UI)
+ */
+export function clearPlayer() {
+  // Stop and clear audio
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.currentTime = 0;
+    if (audioElement.src && audioElement.src.startsWith('blob:')) {
+      URL.revokeObjectURL(audioElement.src);
+    }
+    audioElement.src = '';
+  }
+  
+  // Reset state
+  currentSong = null;
+  setPlayingState(false);
+  
+  // Reset UI
+  const songTitle = document.getElementById('song-title');
+  const songArtist = document.getElementById('song-artist');
+  const progress = document.getElementById('progress');
+  const currentTimeEl = document.getElementById('current-time');
+  const totalTimeEl = document.getElementById('total-time');
+  
+  if (songTitle) {
+    songTitle.textContent = 'No Song Playing';
+  }
+  
+  if (songArtist) {
+    songArtist.textContent = 'Unknown Artist';
+  }
+  
+  if (progress) {
+    progress.style.width = '0%';
+  }
+  
+  if (currentTimeEl) {
+    currentTimeEl.textContent = '0:00';
+  }
+  
+  if (totalTimeEl) {
+    totalTimeEl.textContent = '0:00';
   }
 }

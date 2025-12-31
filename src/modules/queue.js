@@ -1,5 +1,5 @@
 import { metadataManager, formatDuration } from './metadata.js';
-import { playSong, setPlayingState } from './player.js';
+import { playSong, setPlayingState, clearPlayer } from './player.js';
 
 class QueueManager {
   constructor() {
@@ -10,9 +10,21 @@ class QueueManager {
   /**
    * Add song to queue
    */
-  addToQueue(songFilename, metadata) {
+  async addToQueue(songFilename, metadata) {
+    console.log('addToQueue called with:', songFilename);
+    console.trace('Call stack:');
+    
+    const wasEmpty = this.queue.length === 0;
+    
     this.queue.push({ filename: songFilename, metadata });
     this.updateQueueDisplay();
+    
+    // If queue was empty, auto-play the first song
+    if (wasEmpty) {
+      this.currentIndex = 0;
+      await playSong(songFilename, metadata);
+    }
+    
     return this.queue.length - 1;
   }
 
@@ -35,6 +47,9 @@ class QueueManager {
       const item = this.queue[this.currentIndex];
       await playSong(item.filename, item.metadata);
       this.updateQueueDisplay();
+    } else {
+      // No next song - stop playback
+      setPlayingState(false);
     }
   }
 
@@ -53,11 +68,33 @@ class QueueManager {
   /**
    * Remove song from queue
    */
-  removeFromQueue(index) {
-    if (index < this.currentIndex) {
-      this.currentIndex--;
-    }
+  async removeFromQueue(index) {
+    const wasCurrentSong = index === this.currentIndex;
+    const wasBeforeCurrent = index < this.currentIndex;
+    
+    // Remove the song
     this.queue.splice(index, 1);
+    
+    // Adjust current index
+    if (wasBeforeCurrent) {
+      this.currentIndex--;
+    } else if (wasCurrentSong) {
+      // Removed the currently playing song
+      if (this.queue.length === 0) {
+        // Queue is now empty - stop playback
+        this.currentIndex = -1;
+        clearPlayer();
+      } else if (this.currentIndex >= this.queue.length) {
+        // We were at the end, no next song
+        this.currentIndex = this.queue.length - 1;
+        setPlayingState(false);
+      } else {
+        // Play the next song (which is now at the same index)
+        const item = this.queue[this.currentIndex];
+        await playSong(item.filename, item.metadata);
+      }
+    }
+    
     this.updateQueueDisplay();
   }
 
@@ -67,6 +104,7 @@ class QueueManager {
   clearQueue() {
     this.queue = [];
     this.currentIndex = -1;
+    clearPlayer();
     this.updateQueueDisplay();
   }
 
@@ -124,10 +162,10 @@ class QueueManager {
 
     // Attach remove button listeners
     document.querySelectorAll('.remove-from-queue-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const index = parseInt(btn.getAttribute('data-index'));
-        this.removeFromQueue(index);
+        await this.removeFromQueue(index);
       });
     });
   }

@@ -236,46 +236,48 @@ function createPlaylistSongElement(song, index) {
  * Attach event listeners to playlist song items
  */
 function attachPlaylistSongEventListeners(playlistName) {
-  const items = document.querySelectorAll('.playlist-song-item');
-  console.log('Attaching event listeners to', items.length, 'playlist items');
+  const playlistSongsList = document.getElementById('playlist-songs-list');
   
-  // Play buttons
-  document.querySelectorAll('.play-song-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+  // Remove old event listeners by cloning and replacing the entire container
+  const newPlaylistSongsList = playlistSongsList.cloneNode(true);
+  playlistSongsList.parentNode.replaceChild(newPlaylistSongsList, playlistSongsList);
+  
+  // Now attach fresh event listeners using event delegation
+  newPlaylistSongsList.addEventListener('click', async (e) => {
+    const playBtn = e.target.closest('.play-song-btn');
+    const queueBtn = e.target.closest('.add-to-queue-btn');
+    
+    if (playBtn) {
       e.stopPropagation();
-      const songName = btn.getAttribute('data-song');
+      const songName = playBtn.getAttribute('data-song');
       const metadata = metadataManager.getMetadata(songName);
       
-      // Import queueManager
       const { queueManager } = await import('../queue.js');
       await queueManager.playNow(songName, metadata);
-    });
-  });
-
-  // Add to queue buttons
-  document.querySelectorAll('.add-to-queue-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+      return;
+    }
+    
+    if (queueBtn) {
       e.stopPropagation();
-      const songName = btn.getAttribute('data-song');
+      const songName = queueBtn.getAttribute('data-song');
       const metadata = metadataManager.getMetadata(songName);
       
-      // Import queueManager
       const { queueManager } = await import('../queue.js');
-      queueManager.addToQueue(songName, metadata);
+      await queueManager.addToQueue(songName, metadata);
       showNotification(`Added "${metadata.title}" to queue`);
-    });
+      return;
+    }
   });
   
-  // Context menu handler
-  items.forEach(item => {
-    const songName = item.getAttribute('data-song');
-    
-    item.addEventListener('contextmenu', (e) => {
+  // Context menu handler using event delegation
+  newPlaylistSongsList.addEventListener('contextmenu', (e) => {
+    const item = e.target.closest('.playlist-song-item');
+    if (item) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('Right-click on song:', songName, 'in playlist:', playlistName);
+      const songName = item.getAttribute('data-song');
       showContextMenu(e.clientX, e.clientY, songName, playlistName);
-    });
+    }
   });
 }
 
@@ -381,11 +383,18 @@ function createAvailableSongElement(song) {
  * Attach event listeners to add song buttons
  */
 function attachAddSongEventListeners() {
-  document.querySelectorAll('.add-song-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const songName = btn.getAttribute('data-song');
+  const availableSongsList = document.getElementById('available-songs-list');
+  
+  // Use event delegation instead of individual listeners
+  availableSongsList.replaceWith(availableSongsList.cloneNode(true));
+  const newList = document.getElementById('available-songs-list');
+  
+  newList.addEventListener('click', async (e) => {
+    const addBtn = e.target.closest('.add-song-btn');
+    if (addBtn) {
+      const songName = addBtn.getAttribute('data-song');
       await addSongToPlaylist(currentEditingPlaylist, songName);
-    });
+    }
   });
 }
 
