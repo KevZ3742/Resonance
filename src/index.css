@@ -346,6 +346,26 @@ body.dragging-theme::before {
   background: var(--bg-hover);
 }
 
+/* Speed panel positioning */
+.speed-container {
+  position: relative;
+}
+
+#speed-panel {
+  min-width: 140px;
+}
+
+/* Speed option active state */
+.speed-option.active {
+  background: var(--accent-color);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.speed-option.active:hover {
+  background: var(--accent-hover);
+}
+
 /* EQ panel container positioning */
 .eq-container {
   position: relative;

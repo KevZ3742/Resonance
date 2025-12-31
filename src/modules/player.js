@@ -377,25 +377,51 @@ function initLoopControl() {
  */
 function initPlaybackSpeedControl() {
   const speedBtn = document.getElementById('speed-btn');
-  if (!speedBtn) return;
+  const speedPanel = document.getElementById('speed-panel');
+  if (!speedBtn || !speedPanel) return;
   
-  const speedOptions = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-  let currentSpeedIndex = 3; // Start at 1.0x
+  let isSpeedOpen = false;
   
-  const updateSpeedDisplay = () => {
-    speedBtn.textContent = `${playbackSpeed}x`;
-    if (audioElement) {
-      audioElement.playbackRate = playbackSpeed;
-    }
-  };
-  
-  speedBtn.addEventListener('click', () => {
-    currentSpeedIndex = (currentSpeedIndex + 1) % speedOptions.length;
-    playbackSpeed = speedOptions[currentSpeedIndex];
-    updateSpeedDisplay();
+  // Toggle speed panel
+  speedBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSpeedOpen = !isSpeedOpen;
+    speedPanel.classList.toggle('hidden', !isSpeedOpen);
   });
   
-  updateSpeedDisplay();
+  // Close panel when clicking outside
+  document.addEventListener('click', (e) => {
+    if (isSpeedOpen && !speedBtn.contains(e.target) && !speedPanel.contains(e.target)) {
+      isSpeedOpen = false;
+      speedPanel.classList.add('hidden');
+    }
+  });
+  
+  // Handle speed option clicks
+  const speedOptions = speedPanel.querySelectorAll('.speed-option');
+  speedOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const speed = parseFloat(option.getAttribute('data-speed'));
+      playbackSpeed = speed;
+      
+      // Update audio element
+      if (audioElement) {
+        audioElement.playbackRate = speed;
+      }
+      
+      // Update button text
+      speedBtn.textContent = `${speed}x`;
+      
+      // Update active state
+      speedOptions.forEach(opt => opt.classList.remove('active'));
+      option.classList.add('active');
+      
+      // Close panel
+      isSpeedOpen = false;
+      speedPanel.classList.add('hidden');
+    });
+  });
 }
 
 /**

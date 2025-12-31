@@ -303,11 +303,30 @@
           </button>
 
           <!-- Playback Speed Button -->
-          <button
-            class="text-neutral-400 hover:text-white transition text-xs font-semibold px-3 py-2 rounded-2xl hover:bg-neutral-700/50"
-            id="speed-btn" title="Playback Speed">
-            1.0x
-          </button>
+          <div class="relative speed-container">
+            <button
+              class="text-neutral-400 hover:text-white transition text-xs font-semibold px-3 py-2 rounded-2xl hover:bg-neutral-700/50"
+              id="speed-btn" title="Playback Speed">
+              1.0x
+            </button>
+
+            <!-- Speed Panel -->
+            <div class="hidden absolute bottom-full right-0 mb-3 z-50" id="speed-panel">
+              <div class="bg-neutral-800 rounded-2xl p-3 shadow-2xl border border-neutral-700 backdrop-blur-sm min-w-32">
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs text-neutral-400 font-semibold mb-2 px-2">Speed</span>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="0.25">0.25x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="0.5">0.5x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="0.75">0.75x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm active" data-speed="1.0">1.0x (Normal)</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="1.25">1.25x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="1.5">1.5x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="1.75">1.75x</button>
+                  <button class="speed-option text-left px-3 py-2 rounded-lg hover:bg-neutral-700 transition text-sm" data-speed="2.0">2.0x</button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Equalizer Button -->
           <div class="relative eq-container">
