@@ -1,4 +1,3 @@
-// src/modules/queue.js
 import { metadataManager, formatDuration } from './metadata.js';
 import { playSong, setPlayingState } from './player.js';
 

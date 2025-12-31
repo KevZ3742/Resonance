@@ -1,4 +1,3 @@
-// src/modules/playlists/all-songs.js
 import { metadataManager, formatDuration } from '../metadata.js';
 import { queueManager } from '../queue.js';
 import { showContextMenu } from './context-menu.js';

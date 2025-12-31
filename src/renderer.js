@@ -1,5 +1,3 @@
-// src/renderer.js - Main renderer entry point
-
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
 import { initPlayer } from './modules/player.js';
