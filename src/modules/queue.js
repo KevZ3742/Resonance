@@ -1,5 +1,5 @@
 import { metadataManager, formatDuration } from './metadata.js';
-import { playSong, setPlayingState, clearPlayer } from './player.js';
+import { playSong, setPlayingState, clearPlayer } from './player/index.js';
 
 class QueueManager {
   constructor() {

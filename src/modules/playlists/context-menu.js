@@ -1,5 +1,5 @@
 import { metadataManager, showMetadataEditor } from '../metadata.js';
-import { playSong } from '../player.js';
+import { playSong } from '../player/index.js';
 import { removeSongFromPlaylist } from './playlist-api.js';
 import { loadPlaylistSongs } from './playlist-editor.js';
 import { loadAllSongs } from './all-songs.js';

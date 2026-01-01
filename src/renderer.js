@@ -1,6 +1,6 @@
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
-import { initPlayer } from './modules/player.js';
+import { initPlayer } from './modules/player/index.js'; // Changed: added /index.js
 import { initSearch } from './modules/search.js';
 import { initDownload } from './modules/download.js';
 import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists/index.js';

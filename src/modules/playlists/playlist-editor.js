@@ -1,5 +1,4 @@
 import { metadataManager, formatDuration } from '../metadata.js';
-import { playSong } from '../player.js';
 import { showContextMenu, setCurrentEditingPlaylist as setContextMenuPlaylist } from './context-menu.js';
 import { addSongToPlaylist } from './playlist-api.js';
 import { setupDragAndDrop } from './drag-drop.js';
