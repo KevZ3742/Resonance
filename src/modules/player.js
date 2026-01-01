@@ -9,14 +9,16 @@ let loopMode = 'none'; // 'none', 'one', 'all'
 let loopOneCount = 0; // Track how many times current song has looped in 'one' mode
 let playbackSpeed = 1.0;
 
-// Audio context and nodes for equalizer
+// Audio context and nodes for volume normalization
 let audioContext = null;
 let sourceNode = null;
+let analyserNode = null;
 let gainNode = null;
-let eqBands = [];
-
-// EQ frequencies (standard 10-band equalizer)
-const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+let volumeNormalizationEnabled = false;
+let songVolumeCache = {}; // Cache analyzed volumes by filename
+let previousSongVolume = null; // Track the previous song's volume
+let isAnalyzing = false;
+let preAnalysisAudio = null; // Audio element for pre-analysis
 
 /**
  * Initialize music player controls
@@ -29,7 +31,8 @@ export function initPlayer() {
   initProgressBar();
   initLoopControl();
   initPlaybackSpeedControl();
-  initEqualizer();
+  initVolumeNormalization();
+  loadVolumeNormalizationState();
 }
 
 /**
@@ -99,44 +102,38 @@ function createAudioElement() {
   audioElement.playbackRate = 1.0;
   previousVolume = 0.7;
   
-  // Initialize audio context for equalizer
+  // Initialize audio context for volume normalization
   initAudioContext();
 }
 
 /**
- * Initialize audio context and equalizer nodes
+ * Initialize audio context and nodes
  */
 function initAudioContext() {
   try {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
-    // Create gain node for master volume
+    // Create analyser node for volume analysis
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 2048;
+    analyserNode.smoothingTimeConstant = 0.8;
+    
+    // Create gain node for volume adjustment
     gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.0;
+    
+    // Connect nodes: analyser -> gain -> destination
+    analyserNode.connect(gainNode);
     gainNode.connect(audioContext.destination);
-    
-    // Create EQ bands (biquad filters)
-    let previousNode = gainNode;
-    
-    for (let i = EQ_FREQUENCIES.length - 1; i >= 0; i--) {
-      const filter = audioContext.createBiquadFilter();
-      filter.type = 'peaking';
-      filter.frequency.value = EQ_FREQUENCIES[i];
-      filter.Q.value = 1.0;
-      filter.gain.value = 0;
-      
-      filter.connect(previousNode);
-      eqBands.unshift(filter);
-      previousNode = filter;
-    }
   } catch (error) {
     console.error('Failed to initialize audio context:', error);
   }
 }
 
 /**
- * Connect audio element to equalizer
+ * Connect audio element to audio graph
  */
-function connectAudioToEqualizer() {
+function connectAudioToGraph() {
   if (!audioContext || !audioElement) return;
   
   // Resume audio context if suspended (browser autoplay policy)
@@ -148,10 +145,230 @@ function connectAudioToEqualizer() {
   if (!sourceNode) {
     try {
       sourceNode = audioContext.createMediaElementSource(audioElement);
-      sourceNode.connect(eqBands[0]);
+      sourceNode.connect(analyserNode);
     } catch (error) {
-      console.error('Failed to connect audio to equalizer:', error);
+      console.error('Failed to connect audio to graph:', error);
     }
+  }
+}
+
+/**
+ * Analyze audio volume (RMS)
+ */
+function analyzeAudioVolume() {
+  if (!analyserNode) return 0;
+  
+  const bufferLength = analyserNode.frequencyBinCount;
+  const dataArray = new Float32Array(bufferLength);
+  analyserNode.getFloatTimeDomainData(dataArray);
+  
+  // Calculate RMS (Root Mean Square)
+  let sum = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    sum += dataArray[i] * dataArray[i];
+  }
+  const rms = Math.sqrt(sum / bufferLength);
+  
+  // Convert to dB
+  const db = 20 * Math.log10(rms);
+  return db;
+}
+
+/**
+ * Analyze song volume over time
+ */
+async function analyzeSongVolume(songFilename) {
+  if (songVolumeCache[songFilename]) {
+    return songVolumeCache[songFilename];
+  }
+  
+  try {
+    // Create a temporary audio element for analysis
+    const tempAudio = new Audio();
+    const arrayBuffer = await window.electronAPI.readSongFile(songFilename);
+    const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    tempAudio.src = blobUrl;
+    await new Promise((resolve, reject) => {
+      tempAudio.addEventListener('loadedmetadata', resolve, { once: true });
+      tempAudio.addEventListener('error', reject, { once: true });
+    });
+    
+    if (!tempAudio.duration) {
+      URL.revokeObjectURL(blobUrl);
+      return 0;
+    }
+    
+    // Create temporary audio context for analysis
+    const tempContext = new (window.AudioContext || window.webkitAudioContext)();
+    const tempAnalyser = tempContext.createAnalyser();
+    tempAnalyser.fftSize = 2048;
+    tempAnalyser.smoothingTimeConstant = 0.8;
+    
+    const tempSource = tempContext.createMediaElementSource(tempAudio);
+    const tempGain = tempContext.createGain();
+    tempGain.gain.value = 0; // Mute during analysis
+    
+    tempSource.connect(tempAnalyser);
+    tempAnalyser.connect(tempGain);
+    tempGain.connect(tempContext.destination);
+    
+    const samples = [];
+    const duration = tempAudio.duration;
+    
+    // Adaptive sampling based on song length
+    // Short songs (<2min): 20 samples
+    // Medium songs (2-5min): 30 samples
+    // Long songs (>5min): 40 samples
+    // This balances accuracy with performance
+    let samplePoints;
+    if (duration < 120) {
+      samplePoints = 20;
+    } else if (duration < 300) {
+      samplePoints = 30;
+    } else {
+      samplePoints = 40;
+    }
+    
+    console.log(`Analyzing ${songFilename}: ${duration.toFixed(1)}s, ${samplePoints} samples`);
+    
+    for (let i = 0; i < samplePoints; i++) {
+      const time = (duration / samplePoints) * i;
+      tempAudio.currentTime = time;
+      
+      await new Promise(resolve => {
+        tempAudio.addEventListener('seeked', resolve, { once: true });
+      });
+      
+      // Play briefly to get analysis (reduced from 200ms to 150ms for speed)
+      tempAudio.play();
+      await new Promise(resolve => setTimeout(resolve, 150));
+      tempAudio.pause();
+      
+      const bufferLength = tempAnalyser.frequencyBinCount;
+      const dataArray = new Float32Array(bufferLength);
+      tempAnalyser.getFloatTimeDomainData(dataArray);
+      
+      let sum = 0;
+      for (let j = 0; j < bufferLength; j++) {
+        sum += dataArray[j] * dataArray[j];
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+      const db = 20 * Math.log10(rms);
+      
+      if (isFinite(db) && db > -100) {
+        samples.push(db);
+      }
+    }
+    
+    // Cleanup
+    tempAudio.pause();
+    URL.revokeObjectURL(blobUrl);
+    tempContext.close();
+    
+    // Calculate average volume
+    if (samples.length === 0) return 0;
+    
+    // Use weighted average - give more weight to middle samples (chorus/main sections)
+    // First and last 20% get weight 0.8, middle 60% gets weight 1.2
+    let weightedSum = 0;
+    let totalWeight = 0;
+    
+    for (let i = 0; i < samples.length; i++) {
+      const position = i / samples.length;
+      let weight = 1.0;
+      
+      // Reduce weight for intro/outro sections
+      if (position < 0.2 || position > 0.8) {
+        weight = 0.8;
+      } else {
+        weight = 1.2;
+      }
+      
+      weightedSum += samples[i] * weight;
+      totalWeight += weight;
+    }
+    
+    const avgVolume = weightedSum / totalWeight;
+    songVolumeCache[songFilename] = avgVolume;
+    
+    // Save to localStorage for persistence
+    saveSongVolumeCache();
+    
+    console.log(`Analysis complete: ${avgVolume.toFixed(2)}dB from ${samples.length} samples`);
+    
+    return avgVolume;
+  } catch (error) {
+    console.error('Failed to analyze song volume:', error);
+    return 0;
+  }
+}
+
+/**
+ * Apply volume normalization relative to previous song
+ */
+async function applyVolumeNormalization(songFilename) {
+  if (!volumeNormalizationEnabled || !gainNode) {
+    return;
+  }
+  
+  try {
+    const currentSongVolume = await analyzeSongVolume(songFilename);
+    
+    if (isFinite(currentSongVolume)) {
+      let gainAdjustment = 1.0;
+      
+      if (previousSongVolume !== null && isFinite(previousSongVolume)) {
+        // Normalize relative to previous song
+        const volumeDiff = previousSongVolume - currentSongVolume;
+        gainAdjustment = Math.pow(10, volumeDiff / 20);
+        
+        // Clamp gain to reasonable range (0.1x to 3x)
+        gainAdjustment = Math.max(0.1, Math.min(3.0, gainAdjustment));
+        
+        console.log(`Volume normalization: prev=${previousSongVolume.toFixed(2)}dB, curr=${currentSongVolume.toFixed(2)}dB, gain=${gainAdjustment.toFixed(2)}x`);
+      } else {
+        // First song - play at normal volume
+        console.log(`First song - no normalization applied`);
+      }
+      
+      // Smooth transition to new gain
+      const currentTime = audioContext.currentTime;
+      gainNode.gain.cancelScheduledValues(currentTime);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, currentTime);
+      gainNode.gain.linearRampToValueAtTime(gainAdjustment, currentTime + 0.5);
+      
+      // Store this song's volume for next comparison
+      previousSongVolume = currentSongVolume;
+    }
+  } catch (error) {
+    console.error('Failed to apply volume normalization:', error);
+  }
+}
+
+/**
+ * Save song volume cache to localStorage
+ */
+function saveSongVolumeCache() {
+  try {
+    localStorage.setItem('songVolumeCache', JSON.stringify(songVolumeCache));
+  } catch (error) {
+    console.error('Failed to save volume cache:', error);
+  }
+}
+
+/**
+ * Load song volume cache from localStorage
+ */
+function loadSongVolumeCache() {
+  try {
+    const cached = localStorage.getItem('songVolumeCache');
+    if (cached) {
+      songVolumeCache = JSON.parse(cached);
+    }
+  } catch (error) {
+    console.error('Failed to load volume cache:', error);
   }
 }
 
@@ -463,70 +680,212 @@ function initPlaybackSpeedControl() {
 }
 
 /**
- * Initialize equalizer UI
+ * Initialize volume normalization UI
  */
-function initEqualizer() {
+function initVolumeNormalization() {
   const eqBtn = document.getElementById('eq-btn');
-  const eqPanel = document.getElementById('eq-panel');
-  if (!eqBtn || !eqPanel) return;
+  if (!eqBtn) return;
   
-  let isEqOpen = false;
+  // Change button title
+  eqBtn.title = 'Volume Normalization (Click to toggle)';
   
-  eqBtn.addEventListener('click', () => {
-    isEqOpen = !isEqOpen;
-    eqPanel.classList.toggle('hidden', !isEqOpen);
-  });
+  // Update button color based on state
+  const updateButtonColor = () => {
+    if (volumeNormalizationEnabled) {
+      eqBtn.classList.remove('text-neutral-400');
+      eqBtn.classList.add('text-blue-400');
+      eqBtn.title = 'Volume Normalization: ON (Right-click for options)';
+    } else {
+      eqBtn.classList.remove('text-blue-400');
+      eqBtn.classList.add('text-neutral-400');
+      eqBtn.title = 'Volume Normalization: OFF (Click to enable)';
+    }
+  };
   
-  // Close EQ panel when clicking outside
-  document.addEventListener('click', (e) => {
-    if (isEqOpen && !eqBtn.contains(e.target) && !eqPanel.contains(e.target)) {
-      isEqOpen = false;
-      eqPanel.classList.add('hidden');
+  // Set initial color
+  updateButtonColor();
+  
+  // Toggle on click
+  eqBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    volumeNormalizationEnabled = !volumeNormalizationEnabled;
+    saveVolumeNormalizationState();
+    updateButtonColor();
+    
+    if (volumeNormalizationEnabled && currentSong) {
+      // Reset previous song volume to treat current as baseline
+      previousSongVolume = null;
+      // Apply normalization to current song
+      applyVolumeNormalization(currentSong);
+      
+      // Show brief notification
+      showVolumeNormNotification('Volume normalization enabled');
+    } else if (!volumeNormalizationEnabled && gainNode) {
+      // Reset gain to 1.0 and clear previous volume
+      previousSongVolume = null;
+      const currentTime = audioContext.currentTime;
+      gainNode.gain.cancelScheduledValues(currentTime);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, currentTime);
+      gainNode.gain.linearRampToValueAtTime(1.0, currentTime + 0.5);
+      
+      showVolumeNormNotification('Volume normalization disabled');
     }
   });
   
-  // Create EQ sliders
-  const eqSliders = document.getElementById('eq-sliders');
-  if (eqSliders) {
-    EQ_FREQUENCIES.forEach((freq, index) => {
-      const slider = document.createElement('div');
-      slider.className = 'flex flex-col items-center gap-2';
-      slider.innerHTML = `
-        <input 
-          type="range" 
-          min="-12" 
-          max="12" 
-          value="0" 
-          step="1"
-          class="eq-slider"
-          data-band="${index}"
-          orient="vertical"
-        >
-        <span class="text-xs text-neutral-400">${freq < 1000 ? freq : (freq/1000).toFixed(1) + 'k'}</span>
-      `;
-      eqSliders.appendChild(slider);
-      
-      const input = slider.querySelector('input');
-      input.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value);
-        if (eqBands[index]) {
-          eqBands[index].gain.value = value;
-        }
-      });
-    });
+  // Right-click for options (advanced features)
+  eqBtn.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showVolumeNormContextMenu(e.clientX, e.clientY);
+  });
+  
+  // Load volume cache
+  loadSongVolumeCache();
+}
+
+/**
+ * Show volume normalization context menu
+ */
+function showVolumeNormContextMenu(x, y) {
+  // Remove existing menu if any
+  const existingMenu = document.getElementById('volume-norm-context-menu');
+  if (existingMenu) {
+    existingMenu.remove();
   }
   
-  // Reset EQ button
-  const resetEqBtn = document.getElementById('reset-eq-btn');
-  if (resetEqBtn) {
-    resetEqBtn.addEventListener('click', () => {
-      document.querySelectorAll('.eq-slider').forEach((slider, index) => {
-        slider.value = 0;
-        if (eqBands[index]) {
-          eqBands[index].gain.value = 0;
-        }
-      });
-    });
+  const menu = document.createElement('div');
+  menu.id = 'volume-norm-context-menu';
+  menu.className = 'fixed bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg z-50 py-1 min-w-[200px]';
+  
+  const cacheCount = Object.keys(songVolumeCache).length;
+  
+  menu.innerHTML = `
+    <div class="px-4 py-2 text-xs text-neutral-500 border-b border-neutral-700">
+      Volume Normalization Options
+    </div>
+    <button class="volume-norm-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition text-sm" data-action="toggle">
+      ${volumeNormalizationEnabled ? '✓ Enabled' : '○ Disabled'}
+    </button>
+    <div class="border-t border-neutral-700 my-1"></div>
+    <button class="volume-norm-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition text-sm" data-action="clear-cache">
+      Clear cache (${cacheCount} song${cacheCount !== 1 ? 's' : ''})
+    </button>
+    <button class="volume-norm-menu-item w-full text-left px-4 py-2 hover:bg-neutral-700 transition text-sm" data-action="info">
+      How it works
+    </button>
+  `;
+  
+  document.body.appendChild(menu);
+  
+  // Position the menu
+  const menuRect = menu.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  let left = x;
+  let top = y;
+  
+  if (x + menuRect.width > viewportWidth) {
+    left = x - menuRect.width;
+  }
+  
+  if (y + menuRect.height > viewportHeight) {
+    top = y - menuRect.height;
+  }
+  
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+  
+  // Handle menu actions
+  menu.addEventListener('click', (e) => {
+    const action = e.target.closest('.volume-norm-menu-item')?.getAttribute('data-action');
+    if (!action) return;
+    
+    menu.remove();
+    
+    if (action === 'toggle') {
+      document.getElementById('eq-btn').click();
+    } else if (action === 'clear-cache') {
+      const confirmed = confirm(`Clear volume cache for ${cacheCount} song${cacheCount !== 1 ? 's' : ''}?\n\nSongs will be re-analyzed on next playback.`);
+      if (confirmed) {
+        songVolumeCache = {};
+        saveSongVolumeCache();
+        showVolumeNormNotification('Volume cache cleared');
+      }
+    } else if (action === 'info') {
+      showVolumeNormInfo();
+    }
+  });
+  
+  // Close menu when clicking outside
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+}
+
+/**
+ * Show volume normalization info dialog
+ */
+function showVolumeNormInfo() {
+  const message = `Volume Normalization
+
+How it works:
+• First song plays at normal volume
+• Each song after adjusts to match the previous song's volume
+• Songs are analyzed in background before playing
+• Analysis is cached (only done once per song)
+
+This prevents loud songs from blasting you after quiet ones, and vice versa.
+
+Current status: ${volumeNormalizationEnabled ? 'ENABLED' : 'DISABLED'}
+Cached songs: ${Object.keys(songVolumeCache).length}`;
+  
+  alert(message);
+}
+
+/**
+ * Show brief notification for volume normalization
+ */
+function showVolumeNormNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 shadow-lg z-50 transition-opacity text-sm';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }, 1500);
+}
+
+/**
+ * Save volume normalization state
+ */
+function saveVolumeNormalizationState() {
+  try {
+    localStorage.setItem('volumeNormalizationEnabled', JSON.stringify(volumeNormalizationEnabled));
+  } catch (error) {
+    console.error('Failed to save volume normalization state:', error);
+  }
+}
+
+/**
+ * Load volume normalization state
+ */
+function loadVolumeNormalizationState() {
+  try {
+    const saved = localStorage.getItem('volumeNormalizationEnabled');
+    if (saved !== null) {
+      volumeNormalizationEnabled = JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error('Failed to load volume normalization state:', error);
   }
 }
 
@@ -555,6 +914,29 @@ function updateProgressFromMouse(e, progressBar) {
 }
 
 /**
+ * Pre-analyze the next song in queue (called before transition)
+ */
+export async function preAnalyzeNextSong() {
+  if (!volumeNormalizationEnabled || !window.queueManager) {
+    return;
+  }
+  
+  const queue = window.queueManager.getQueue();
+  const currentIndex = window.queueManager.getCurrentIndex();
+  
+  if (currentIndex >= 0 && currentIndex < queue.length - 1) {
+    const nextSong = queue[currentIndex + 1];
+    if (nextSong && !songVolumeCache[nextSong.filename]) {
+      console.log(`Pre-analyzing next song: ${nextSong.filename}`);
+      // Analyze in background without blocking
+      analyzeSongVolume(nextSong.filename).catch(err => {
+        console.error('Pre-analysis failed:', err);
+      });
+    }
+  }
+}
+
+/**
  * Play a song by filename
  */
 export async function playSong(songFilename, metadata = {}) {
@@ -573,8 +955,8 @@ export async function playSong(songFilename, metadata = {}) {
     audioElement.src = blobUrl;
     audioElement.load();
     
-    // Connect to equalizer on first play
-    connectAudioToEqualizer();
+    // Connect to audio graph on first play
+    connectAudioToGraph();
     
     const songTitle = document.getElementById('song-title');
     const songArtist = document.getElementById('song-artist');
@@ -589,9 +971,17 @@ export async function playSong(songFilename, metadata = {}) {
     
     currentSong = songFilename;
     
+    // Apply volume normalization BEFORE playback starts
+    if (volumeNormalizationEnabled) {
+      await applyVolumeNormalization(songFilename);
+    }
+    
     try {
       await audioElement.play();
       setPlayingState(true);
+      
+      // Pre-analyze next song in background
+      preAnalyzeNextSong();
     } catch (playError) {
       console.error('Error during playback:', playError);
       setPlayingState(false);
@@ -641,6 +1031,7 @@ export function clearPlayer() {
   
   currentSong = null;
   loopOneCount = 0; // Reset loop counter when clearing
+  previousSongVolume = null; // Reset volume normalization baseline
   setPlayingState(false);
   
   const songTitle = document.getElementById('song-title');
