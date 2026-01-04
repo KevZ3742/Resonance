@@ -29,10 +29,18 @@ export function loadLyrics(lyrics) {
  * Display lyrics in the UI
  */
 function displayLyrics() {
+  console.log('Displaying lyrics:', currentLyrics);
   const lyricsContainer = document.getElementById('lyrics');
   
   if (!currentLyrics || currentLyrics.length === 0) {
-    lyricsContainer.innerHTML = '<p class="text-neutral-500 text-sm">No lyrics detected</p>';
+    lyricsContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-12">
+        <svg class="w-16 h-16 text-neutral-600 mb-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+        <p class="text-neutral-400 text-base font-medium">No lyrics detected</p>
+      </div>
+    `;
     return;
   }
   
@@ -164,8 +172,7 @@ function highlightLine(index) {
 export function clearLyrics() {
   currentLyrics = [];
   currentLineIndex = -1;
-  const lyricsContainer = document.getElementById('lyrics');
-  lyricsContainer.innerHTML = '<p class="text-neutral-500 text-sm">Select a song to view lyrics</p>';
+  displayLyrics(); // Use displayLyrics to show "No lyrics detected" message
 }
 
 /**
