@@ -29,7 +29,6 @@ export function loadLyrics(lyrics) {
  * Display lyrics in the UI
  */
 function displayLyrics() {
-  console.log('Displaying lyrics:', currentLyrics);
   const lyricsContainer = document.getElementById('lyrics');
   
   if (!currentLyrics || currentLyrics.length === 0) {
