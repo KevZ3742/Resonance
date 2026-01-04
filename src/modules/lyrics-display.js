@@ -42,15 +42,14 @@ function displayLyrics() {
         <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
       </svg>
       <h3 class="text-lg font-semibold text-white">Lyrics</h3>
-      <div class="flex-1 h-px bg-linear-to-r from-neutral-700 to-transparent"></div>
     </div>
     <div class="space-y-1">
       ${currentLyrics.map((line, index) => {
         const minutes = Math.floor(line.time / 60);
         const seconds = line.time % 60;
         const timestamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300" data-index="${index}" data-time="${line.time}">
-          <span class="text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5">${timestamp}</span>
+        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300 cursor-pointer hover:bg-neutral-700/30 rounded px-2 -mx-2" data-index="${index}" data-time="${line.time}">
+          <span class="text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5 hover:text-blue-400 transition-colors">${timestamp}</span>
           <span class="flex-1">${escapeHtml(line.text)}</span>
         </div>`;
       }).join('')}
@@ -58,6 +57,32 @@ function displayLyrics() {
   `;
   
   lyricsContainer.innerHTML = lyricsHTML;
+  
+  // Attach click handlers to lyric lines
+  attachLyricClickHandlers();
+}
+
+/**
+ * Attach click handlers to lyric lines for seeking
+ */
+function attachLyricClickHandlers() {
+  const lyricLines = document.querySelectorAll('.lyric-line');
+  
+  lyricLines.forEach(line => {
+    line.addEventListener('click', () => {
+      const time = parseFloat(line.getAttribute('data-time'));
+      const audioElement = getAudioElement();
+      
+      if (audioElement && !isNaN(time)) {
+        audioElement.currentTime = time;
+        
+        // Update the current line index immediately
+        const index = parseInt(line.getAttribute('data-index'));
+        currentLineIndex = index;
+        highlightLine(index);
+      }
+    });
+  });
 }
 
 /**
