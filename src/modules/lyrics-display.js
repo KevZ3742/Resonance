@@ -55,9 +55,9 @@ function displayLyrics() {
         const minutes = Math.floor(line.time / 60);
         const seconds = line.time % 60;
         const timestamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300 cursor-pointer hover:bg-neutral-700/30 rounded px-2 -mx-2" data-index="${index}" data-time="${line.time}">
+        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300 cursor-pointer hover:bg-neutral-700/30 rounded px-2 -mx-2 wrap-break-word" data-index="${index}" data-time="${line.time}">
           <span class="text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5 hover:text-blue-400 transition-colors">${timestamp}</span>
-          <span class="flex-1">${escapeHtml(line.text)}</span>
+          <span class="flex-1 wrap-break-word">${escapeHtml(line.text)}</span>
         </div>`;
       }).join('')}
     </div>
