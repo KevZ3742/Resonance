@@ -1,3 +1,4 @@
+// src/modules/metadata.js - Enhanced version with lyrics support
 import { formatDuration } from '../utils/formatters.js';
 
 /**
@@ -32,7 +33,8 @@ class MetadataManager {
       title: this.extractTitleFromFilename(filename),
       artist: 'Unknown Artist',
       duration: null,
-      thumbnail: null
+      thumbnail: null,
+      lyrics: [] // Array of {time: number, text: string}
     };
   }
 
@@ -117,7 +119,7 @@ export const metadataManager = new MetadataManager();
 export { formatDuration };
 
 /**
- * Show metadata editor modal
+ * Show metadata editor modal with lyrics support
  * @param {string} filename - Song filename
  * @param {Function} onSave - Callback when metadata is saved
  */
@@ -129,13 +131,13 @@ export function showMetadataEditor(filename, onSave) {
   modal.id = 'metadata-editor-modal';
   
   modal.innerHTML = `
-    <div class="bg-neutral-800 rounded-2xl w-150 max-w-2xl">
+    <div class="bg-neutral-800 rounded-2xl w-200 max-w-[90vw] max-h-[90vh] flex flex-col">
       <div class="px-6 pt-6 pb-4 border-b border-neutral-700">
         <h3 class="text-xl font-bold">Edit Song Metadata</h3>
         <p class="text-sm text-neutral-400 mt-1">${filename}</p>
       </div>
       
-      <div class="p-6 space-y-4">
+      <div class="overflow-y-auto flex-1 p-6 space-y-4">
         <div>
           <label class="block text-sm font-semibold mb-2">Title</label>
           <input 
@@ -163,9 +165,31 @@ export function showMetadataEditor(filename, onSave) {
           </div>
           <p class="text-xs text-neutral-500 mt-1">Duration is automatically detected from the MP3 file</p>
         </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2">Lyrics (with timestamps)</label>
+          <p class="text-xs text-neutral-500 mb-2">Format: [MM:SS] Lyric text (e.g., [00:15] First line of lyrics)</p>
+          <textarea 
+            id="metadata-lyrics"
+            rows="12"
+            placeholder="[00:00] First line
+[00:05] Second line
+[00:10] Third line"
+            class="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition font-mono text-sm"
+          >${formatLyricsForDisplay(metadata.lyrics || [])}</textarea>
+          <div class="flex gap-2 mt-2">
+            <button id="parse-lyrics-btn" class="text-xs bg-neutral-600 hover:bg-neutral-500 px-3 py-1 rounded transition">
+              Parse & Validate
+            </button>
+            <button id="clear-timestamps-btn" class="text-xs bg-neutral-600 hover:bg-neutral-500 px-3 py-1 rounded transition">
+              Clear Timestamps
+            </button>
+            <span id="lyrics-status" class="text-xs text-neutral-500 self-center ml-2"></span>
+          </div>
+        </div>
       </div>
       
-      <div class="flex gap-2 justify-end px-6 pb-6">
+      <div class="flex gap-2 justify-end px-6 pb-6 border-t border-neutral-700 pt-4">
         <button id="metadata-cancel" class="bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-2 rounded-lg transition">
           Cancel
         </button>
@@ -180,6 +204,36 @@ export function showMetadataEditor(filename, onSave) {
   
   // Focus first input
   setTimeout(() => document.getElementById('metadata-title').focus(), 100);
+  
+  // Parse lyrics button
+  const parseLyricsBtn = modal.querySelector('#parse-lyrics-btn');
+  const lyricsTextarea = modal.querySelector('#metadata-lyrics');
+  const lyricsStatus = modal.querySelector('#lyrics-status');
+  
+  parseLyricsBtn.addEventListener('click', () => {
+    const text = lyricsTextarea.value;
+    const parsed = parseLyrics(text);
+    
+    if (parsed.errors.length > 0) {
+      lyricsStatus.textContent = `⚠️ ${parsed.errors.length} error(s) found`;
+      lyricsStatus.className = 'text-xs text-red-400 self-center ml-2';
+      alert('Errors found:\n' + parsed.errors.join('\n'));
+    } else {
+      lyricsStatus.textContent = `✓ ${parsed.lyrics.length} lines parsed successfully`;
+      lyricsStatus.className = 'text-xs text-green-400 self-center ml-2';
+    }
+  });
+  
+  // Clear timestamps button
+  const clearTimestampsBtn = modal.querySelector('#clear-timestamps-btn');
+  clearTimestampsBtn.addEventListener('click', () => {
+    const text = lyricsTextarea.value;
+    const lines = text.split('\n');
+    const cleaned = lines.map(line => line.replace(/^\[[\d:]+\]\s*/, '')).join('\n');
+    lyricsTextarea.value = cleaned;
+    lyricsStatus.textContent = 'Timestamps removed';
+    lyricsStatus.className = 'text-xs text-neutral-400 self-center ml-2';
+  });
   
   // Cancel handler
   const cancelBtn = modal.querySelector('#metadata-cancel');
@@ -199,10 +253,19 @@ export function showMetadataEditor(filename, onSave) {
   saveBtn.addEventListener('click', async () => {
     const title = document.getElementById('metadata-title').value.trim();
     const artist = document.getElementById('metadata-artist').value.trim();
+    const lyricsText = document.getElementById('metadata-lyrics').value.trim();
+    
+    // Parse lyrics
+    const parsed = parseLyrics(lyricsText);
+    if (parsed.errors.length > 0) {
+      const proceed = confirm(`Found ${parsed.errors.length} error(s) in lyrics. Save anyway?`);
+      if (!proceed) return;
+    }
     
     await metadataManager.setMetadata(filename, {
       title: title || metadata.title,
-      artist: artist || metadata.artist
+      artist: artist || metadata.artist,
+      lyrics: parsed.lyrics
     });
     
     // Update duration from file if not set
@@ -217,7 +280,7 @@ export function showMetadataEditor(filename, onSave) {
     }
   });
   
-  // Enter key to save
+  // Enter key to save (only on title/artist inputs)
   modal.querySelectorAll('input').forEach(input => {
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -237,4 +300,64 @@ export function showMetadataEditor(filename, onSave) {
       }
     });
   }
+}
+
+/**
+ * Parse lyrics text into structured format
+ * @param {string} text - Raw lyrics text
+ * @returns {Object} {lyrics: Array, errors: Array}
+ */
+function parseLyrics(text) {
+  const lines = text.split('\n');
+  const lyrics = [];
+  const errors = [];
+  
+  lines.forEach((line, index) => {
+    line = line.trim();
+    if (!line) return;
+    
+    // Match [MM:SS] or [M:SS] format
+    const match = line.match(/^\[(\d{1,2}):(\d{2})\]\s*(.+)$/);
+    
+    if (match) {
+      const minutes = parseInt(match[1]);
+      const seconds = parseInt(match[2]);
+      const text = match[3].trim();
+      
+      if (seconds >= 60) {
+        errors.push(`Line ${index + 1}: Seconds must be less than 60`);
+      } else if (!text) {
+        errors.push(`Line ${index + 1}: Empty lyric text`);
+      } else {
+        const timeInSeconds = minutes * 60 + seconds;
+        lyrics.push({ time: timeInSeconds, text });
+      }
+    } else if (line.startsWith('[')) {
+      errors.push(`Line ${index + 1}: Invalid timestamp format. Use [MM:SS]`);
+    } else {
+      // Line without timestamp - add with time 0
+      lyrics.push({ time: 0, text: line });
+    }
+  });
+  
+  // Sort by time
+  lyrics.sort((a, b) => a.time - b.time);
+  
+  return { lyrics, errors };
+}
+
+/**
+ * Format lyrics array for display in textarea
+ * @param {Array} lyrics - Array of {time, text} objects
+ * @returns {string} Formatted text
+ */
+function formatLyricsForDisplay(lyrics) {
+  if (!lyrics || lyrics.length === 0) return '';
+  
+  return lyrics.map(line => {
+    const minutes = Math.floor(line.time / 60);
+    const seconds = line.time % 60;
+    const timestamp = `[${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+    return `${timestamp} ${line.text}`;
+  }).join('\n');
 }

@@ -1,10 +1,12 @@
+// src/renderer.js - Updated with lyrics display
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
-import { initPlayer } from './modules/player/index.js'; // Changed: added /index.js
+import { initPlayer } from './modules/player/index.js';
 import { initSearch } from './modules/search.js';
 import { initDownload } from './modules/download.js';
 import { initPlaylists, loadAllSongs, loadPlaylists, refreshAvailableSongs, getCurrentEditingPlaylist } from './modules/playlists/index.js';
 import { initPreferences } from './modules/preferences.js';
+import { initLyricsDisplay } from './modules/lyrics-display.js';
 import { metadataManager } from './modules/metadata.js';
 import { queueManager } from './modules/queue.js';
 
@@ -21,6 +23,7 @@ async function initApp() {
   // Initialize main UI components
   initTabs();
   initPlayer();
+  initLyricsDisplay(); // Initialize lyrics display
   initSearch();
   initPreferences();
   

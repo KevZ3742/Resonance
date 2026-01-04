@@ -1,3 +1,4 @@
+// src/modules/player/index.js - Updated with lyrics support
 import { createAudioElement, getAudioElement, connectAudioToGraph } from './audio-element.js';
 import { initPlayPauseButton, setPlayingState, getPlayingState } from './playback-controls.js';
 import { initNavigationButtons } from './navigation.js';
@@ -7,6 +8,7 @@ import { initLoopControl } from './loop.js';
 import { initPlaybackSpeedControl } from './speed.js';
 import { initVolumeNormalization, applyVolumeNormalization, preAnalyzeNextSong, resetVolumeNormalization } from './volume-normalization.js';
 import { formatDuration } from '../../utils/formatters.js';
+import { loadLyrics, clearLyrics } from '../lyrics-display.js';
 
 let currentSong = null;
 let loopOneCount = 0;
@@ -93,6 +95,13 @@ export async function playSong(songFilename, metadata = {}) {
       songArtist.textContent = metadata.artist || 'Unknown Artist';
     }
     
+    // Load and display lyrics
+    if (metadata.lyrics && metadata.lyrics.length > 0) {
+      loadLyrics(metadata.lyrics);
+    } else {
+      clearLyrics();
+    }
+    
     currentSong = songFilename;
     
     await applyVolumeNormalization(songFilename);
@@ -131,6 +140,7 @@ export function clearPlayer() {
   
   resetVolumeNormalization();
   setPlayingState(false);
+  clearLyrics();
   
   const songTitle = document.getElementById('song-title');
   const songArtist = document.getElementById('song-artist');
