@@ -1,4 +1,3 @@
-// src/modules/lyrics-display.js - Synchronized lyrics display
 import { getAudioElement } from './player/audio-element.js';
 
 let currentLyrics = [];
@@ -33,16 +32,27 @@ function displayLyrics() {
   const lyricsContainer = document.getElementById('lyrics');
   
   if (!currentLyrics || currentLyrics.length === 0) {
-    lyricsContainer.innerHTML = '<p class="text-neutral-500">No lyrics available</p>';
+    lyricsContainer.innerHTML = '<p class="text-neutral-500 text-sm">No lyrics detected</p>';
     return;
   }
   
-  // Create lyrics lines with IDs for highlighting
-  const lyricsHTML = currentLyrics.map((line, index) => {
-    return `<div class="lyric-line py-1 transition-all duration-300" data-index="${index}" data-time="${line.time}">
-      ${escapeHtml(line.text)}
-    </div>`;
-  }).join('');
+  // Create lyrics header and lines with timestamps
+  const lyricsHTML = `
+    <div class="mb-3 pb-2 border-b border-neutral-700">
+      <h3 class="text-sm font-semibold text-neutral-400">Lyrics</h3>
+    </div>
+    <div class="space-y-1">
+      ${currentLyrics.map((line, index) => {
+        const minutes = Math.floor(line.time / 60);
+        const seconds = line.time % 60;
+        const timestamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300" data-index="${index}" data-time="${line.time}">
+          <span class="text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5">${timestamp}</span>
+          <span class="flex-1">${escapeHtml(line.text)}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
   
   lyricsContainer.innerHTML = lyricsHTML;
 }
@@ -82,9 +92,18 @@ function highlightLine(index) {
   const lines = document.querySelectorAll('.lyric-line');
   
   lines.forEach((line, i) => {
+    const textSpan = line.querySelector('span:last-child');
+    const timestampSpan = line.querySelector('span:first-child');
+    
+    if (!textSpan) return;
+    
     if (i === index) {
-      line.classList.add('text-blue-400', 'font-semibold', 'scale-105');
-      line.classList.remove('text-neutral-300');
+      textSpan.classList.add('text-blue-400', 'font-semibold');
+      textSpan.classList.remove('text-neutral-300', 'text-neutral-500');
+      if (timestampSpan) {
+        timestampSpan.classList.add('text-blue-500');
+        timestampSpan.classList.remove('text-neutral-500');
+      }
       
       // Scroll into view
       line.scrollIntoView({
@@ -93,12 +112,20 @@ function highlightLine(index) {
       });
     } else if (i < index) {
       // Past lines - dimmed
-      line.classList.add('text-neutral-500');
-      line.classList.remove('text-neutral-300', 'text-blue-400', 'font-semibold', 'scale-105');
+      textSpan.classList.add('text-neutral-500');
+      textSpan.classList.remove('text-neutral-300', 'text-blue-400', 'font-semibold');
+      if (timestampSpan) {
+        timestampSpan.classList.remove('text-blue-500');
+        timestampSpan.classList.add('text-neutral-500');
+      }
     } else {
       // Future lines - normal
-      line.classList.add('text-neutral-300');
-      line.classList.remove('text-neutral-500', 'text-blue-400', 'font-semibold', 'scale-105');
+      textSpan.classList.add('text-neutral-300');
+      textSpan.classList.remove('text-neutral-500', 'text-blue-400', 'font-semibold');
+      if (timestampSpan) {
+        timestampSpan.classList.remove('text-blue-500');
+        timestampSpan.classList.add('text-neutral-500');
+      }
     }
   });
 }
@@ -110,7 +137,7 @@ export function clearLyrics() {
   currentLyrics = [];
   currentLineIndex = -1;
   const lyricsContainer = document.getElementById('lyrics');
-  lyricsContainer.innerHTML = 'Select a song to view lyrics';
+  lyricsContainer.innerHTML = '<p class="text-neutral-500 text-sm">Select a song to view lyrics</p>';
 }
 
 /**

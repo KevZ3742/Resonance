@@ -1,4 +1,3 @@
-// src/modules/metadata.js - Enhanced version with lyrics support
 import { formatDuration } from '../utils/formatters.js';
 
 /**
@@ -181,9 +180,6 @@ export function showMetadataEditor(filename, onSave) {
             <button id="parse-lyrics-btn" class="text-xs bg-neutral-600 hover:bg-neutral-500 px-3 py-1 rounded transition">
               Parse & Validate
             </button>
-            <button id="clear-timestamps-btn" class="text-xs bg-neutral-600 hover:bg-neutral-500 px-3 py-1 rounded transition">
-              Clear Timestamps
-            </button>
             <span id="lyrics-status" class="text-xs text-neutral-500 self-center ml-2"></span>
           </div>
         </div>
@@ -210,30 +206,21 @@ export function showMetadataEditor(filename, onSave) {
   const lyricsTextarea = modal.querySelector('#metadata-lyrics');
   const lyricsStatus = modal.querySelector('#lyrics-status');
   
-  parseLyricsBtn.addEventListener('click', () => {
-    const text = lyricsTextarea.value;
-    const parsed = parseLyrics(text);
-    
-    if (parsed.errors.length > 0) {
-      lyricsStatus.textContent = `⚠️ ${parsed.errors.length} error(s) found`;
-      lyricsStatus.className = 'text-xs text-red-400 self-center ml-2';
-      alert('Errors found:\n' + parsed.errors.join('\n'));
-    } else {
-      lyricsStatus.textContent = `✓ ${parsed.lyrics.length} lines parsed successfully`;
-      lyricsStatus.className = 'text-xs text-green-400 self-center ml-2';
-    }
-  });
-  
-  // Clear timestamps button
-  const clearTimestampsBtn = modal.querySelector('#clear-timestamps-btn');
-  clearTimestampsBtn.addEventListener('click', () => {
-    const text = lyricsTextarea.value;
-    const lines = text.split('\n');
-    const cleaned = lines.map(line => line.replace(/^\[[\d:]+\]\s*/, '')).join('\n');
-    lyricsTextarea.value = cleaned;
-    lyricsStatus.textContent = 'Timestamps removed';
-    lyricsStatus.className = 'text-xs text-neutral-400 self-center ml-2';
-  });
+  if (parseLyricsBtn) {
+    parseLyricsBtn.addEventListener('click', () => {
+      const text = lyricsTextarea.value;
+      const parsed = parseLyrics(text);
+      
+      if (parsed.errors.length > 0) {
+        lyricsStatus.textContent = `⚠️ ${parsed.errors.length} error(s) found`;
+        lyricsStatus.className = 'text-xs text-red-400 self-center ml-2';
+        alert('Errors found:\n' + parsed.errors.join('\n'));
+      } else {
+        lyricsStatus.textContent = `✓ ${parsed.lyrics.length} lines parsed successfully`;
+        lyricsStatus.className = 'text-xs text-green-400 self-center ml-2';
+      }
+    });
+  }
   
   // Cancel handler
   const cancelBtn = modal.querySelector('#metadata-cancel');
@@ -352,7 +339,7 @@ function parseLyrics(text) {
  * @returns {string} Formatted text
  */
 function formatLyricsForDisplay(lyrics) {
-  if (!lyrics || lyrics.length === 0) return '';
+  if (!lyrics || !Array.isArray(lyrics) || lyrics.length === 0) return '';
   
   return lyrics.map(line => {
     const minutes = Math.floor(line.time / 60);

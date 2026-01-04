@@ -1,4 +1,3 @@
-// src/modules/player/index.js - Updated with lyrics support
 import { createAudioElement, getAudioElement, connectAudioToGraph } from './audio-element.js';
 import { initPlayPauseButton, setPlayingState, getPlayingState } from './playback-controls.js';
 import { initNavigationButtons } from './navigation.js';

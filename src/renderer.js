@@ -1,4 +1,3 @@
-// src/renderer.js - Updated with lyrics display
 import './index.css';
 import { initTabs, initLibraryTabs } from './modules/tabs.js';
 import { initPlayer } from './modules/player/index.js';
