@@ -36,10 +36,13 @@ function displayLyrics() {
     return;
   }
   
-  // Create lyrics header and lines with timestamps
   const lyricsHTML = `
-    <div class="mb-3 pb-2 border-b border-neutral-700">
-      <h3 class="text-sm font-semibold text-neutral-400">Lyrics</h3>
+    <div class="mb-2 flex items-center gap-3">
+      <svg class="w-5 h-5 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+      </svg>
+      <h3 class="text-lg font-semibold text-white">Lyrics</h3>
+      <div class="flex-1 h-px bg-linear-to-r from-neutral-700 to-transparent"></div>
     </div>
     <div class="space-y-1">
       ${currentLyrics.map((line, index) => {
