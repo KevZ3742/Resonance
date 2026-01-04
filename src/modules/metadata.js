@@ -228,13 +228,6 @@ export function showMetadataEditor(filename, onSave) {
     modal.remove();
   });
   
-  // Click outside to close
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
-  });
-  
   // Save handler
   const saveBtn = modal.querySelector('#metadata-save');
   saveBtn.addEventListener('click', async () => {
