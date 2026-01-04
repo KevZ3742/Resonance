@@ -55,9 +55,9 @@ function displayLyrics() {
         const minutes = Math.floor(line.time / 60);
         const seconds = line.time % 60;
         const timestamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        return `<div class="lyric-line flex gap-3 py-0.5 transition-all duration-300 cursor-pointer hover:bg-neutral-700/30 rounded px-2 -mx-2 wrap-break-word" data-index="${index}" data-time="${line.time}">
-          <span class="text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5 hover:text-blue-400 transition-colors">${timestamp}</span>
-          <span class="flex-1 wrap-break-word">${escapeHtml(line.text)}</span>
+        return `<div class="lyric-line flex gap-3 py-1 transition-all duration-300 cursor-pointer hover:bg-neutral-700/30 rounded px-2 -mx-2 wrap-break-word" data-index="${index}" data-time="${line.time}">
+          <span class="lyric-timestamp text-neutral-500 text-xs font-mono w-10 shrink-0 pt-0.5 hover:text-blue-400 transition-colors">${timestamp}</span>
+          <span class="lyric-text flex-1 wrap-break-word transition-all duration-300">${escapeHtml(line.text)}</span>
         </div>`;
       }).join('')}
     </div>
@@ -127,16 +127,19 @@ function highlightLine(index) {
   const lines = document.querySelectorAll('.lyric-line');
   
   lines.forEach((line, i) => {
-    const textSpan = line.querySelector('span:last-child');
-    const timestampSpan = line.querySelector('span:first-child');
+    const textSpan = line.querySelector('.lyric-text');
+    const timestampSpan = line.querySelector('.lyric-timestamp');
     
     if (!textSpan) return;
     
     if (i === index) {
-      textSpan.classList.add('text-blue-400', 'font-semibold');
-      textSpan.classList.remove('text-neutral-300', 'text-neutral-500');
+      // Current line - make it bigger and highlighted
+      textSpan.classList.add('text-blue-400', 'font-bold', 'text-xl', 'scale-105');
+      textSpan.classList.remove('text-neutral-300', 'text-neutral-500', 'text-base');
+      line.classList.add('py-2');
+      line.classList.remove('py-1');
       if (timestampSpan) {
-        timestampSpan.classList.add('text-blue-500');
+        timestampSpan.classList.add('text-blue-500', 'font-bold');
         timestampSpan.classList.remove('text-neutral-500');
       }
       
@@ -146,19 +149,23 @@ function highlightLine(index) {
         block: 'center'
       });
     } else if (i < index) {
-      // Past lines - dimmed
-      textSpan.classList.add('text-neutral-500');
-      textSpan.classList.remove('text-neutral-300', 'text-blue-400', 'font-semibold');
+      // Past lines - dimmed and normal size
+      textSpan.classList.add('text-neutral-500', 'text-base');
+      textSpan.classList.remove('text-neutral-300', 'text-blue-400', 'font-bold', 'text-xl', 'scale-105');
+      line.classList.add('py-1');
+      line.classList.remove('py-2');
       if (timestampSpan) {
-        timestampSpan.classList.remove('text-blue-500');
+        timestampSpan.classList.remove('text-blue-500', 'font-bold');
         timestampSpan.classList.add('text-neutral-500');
       }
     } else {
-      // Future lines - normal
-      textSpan.classList.add('text-neutral-300');
-      textSpan.classList.remove('text-neutral-500', 'text-blue-400', 'font-semibold');
+      // Future lines - normal color and size
+      textSpan.classList.add('text-neutral-300', 'text-base');
+      textSpan.classList.remove('text-neutral-500', 'text-blue-400', 'font-bold', 'text-xl', 'scale-105');
+      line.classList.add('py-1');
+      line.classList.remove('py-2');
       if (timestampSpan) {
-        timestampSpan.classList.remove('text-blue-500');
+        timestampSpan.classList.remove('text-blue-500', 'font-bold');
         timestampSpan.classList.add('text-neutral-500');
       }
     }
